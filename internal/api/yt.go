@@ -2,6 +2,7 @@ package api
 
 import (
 	"context"
+	"io"
 	"net/http"
 	"path/filepath"
 	"strings"
@@ -19,58 +20,94 @@ func (h *Handler) ytSearch(w http.ResponseWriter, r *http.Request) {
 
 	tracks, err := h.YT.Search(r.Context(), q)
 	if err != nil {
-		h.Log.Warn("yt search failed", "query", q, "err", err)
-		h.fail(w, http.StatusBadGateway, "search failed: "+err.Error())
+		h.fail(w, http.StatusInternalServerError, "yt search error: "+err.Error())
 		return
 	}
-
 	h.json(w, http.StatusOK, tracks)
 }
 
-// ytStream redirects (HTTP 302) to the direct CDN googlevideo audio stream.
-// Zero STB bandwidth consumption.
+// ytStream streams audio via STB proxy to prevent CORS issues, IP binding blocks, and ensure seek/range support.
 func (h *Handler) ytStream(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "id")
 	if id == "" {
 		id = r.URL.Query().Get("id")
 	}
 	id = strings.TrimPrefix(id, "yt_")
-
 	if id == "" {
 		h.fail(w, http.StatusBadRequest, "missing video id")
 		return
 	}
 
-	url, err := h.YT.ResolveStream(r.Context(), id)
+	streamURL, err := h.YT.ResolveStream(r.Context(), id)
 	if err != nil {
-		h.Log.Warn("yt resolve stream failed", "id", id, "err", err)
-		h.fail(w, http.StatusBadGateway, "resolve stream failed: "+err.Error())
+		h.fail(w, http.StatusBadGateway, "failed to resolve audio stream: "+err.Error())
 		return
 	}
 
-	// 302 Found redirect to CDN
-	http.Redirect(w, r, url, http.StatusFound)
+	req, err := http.NewRequestWithContext(r.Context(), r.Method, streamURL, nil)
+	if err != nil {
+		h.fail(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	// Forward Range header if present
+	if rng := r.Header.Get("Range"); rng != "" {
+		req.Header.Set("Range", rng)
+	}
+	req.Header.Set("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64)")
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		h.fail(w, http.StatusBadGateway, "upstream cdn error: "+err.Error())
+		return
+	}
+	defer resp.Body.Close()
+
+	// Set CORS & streaming headers
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+	w.Header().Set("Access-Control-Allow-Methods", "GET, HEAD, OPTIONS")
+	w.Header().Set("Access-Control-Allow-Headers", "Range, Accept-Encoding")
+	w.Header().Set("Access-Control-Expose-Headers", "Content-Range, Content-Length, Accept-Ranges")
+	w.Header().Set("Accept-Ranges", "bytes")
+
+	if ct := resp.Header.Get("Content-Type"); ct != "" {
+		w.Header().Set("Content-Type", ct)
+	} else {
+		w.Header().Set("Content-Type", "audio/mp4")
+	}
+	if cl := resp.Header.Get("Content-Length"); cl != "" {
+		w.Header().Set("Content-Length", cl)
+	}
+	if cr := resp.Header.Get("Content-Range"); cr != "" {
+		w.Header().Set("Content-Range", cr)
+	}
+
+	w.WriteHeader(resp.StatusCode)
+	if r.Method != http.MethodHead {
+		_, _ = io.Copy(w, resp.Body)
+	}
 }
 
-// ytDownload downloads the YouTube Music track directly to the server's music_writable/Streaming folder.
-// Admin-only endpoint.
+// ytDownload downloads the audio to the server storage (admin only).
 func (h *Handler) ytDownload(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "id")
 	if id == "" {
 		id = r.URL.Query().Get("id")
 	}
 	id = strings.TrimPrefix(id, "yt_")
-
 	if id == "" {
 		h.fail(w, http.StatusBadRequest, "missing video id")
 		return
 	}
 
-	outputDir := filepath.Join(h.Opt.WritableRoot, "Streaming")
+	destDir := "/music_writable/Streaming"
+	if h.Opt.WritableRoot != "" {
+		destDir = filepath.Join(h.Opt.WritableRoot, "Streaming")
+	}
+
 	go func() {
 		ctx := context.Background()
-		h.Log.Info("starting yt download", "id", id, "dest", outputDir)
-		if err := h.YT.Download(ctx, id, outputDir); err != nil {
+		if err := h.YT.Download(ctx, id, destDir); err != nil {
 			h.Log.Error("yt download failed", "id", id, "err", err)
 			return
 		}
@@ -79,8 +116,8 @@ func (h *Handler) ytDownload(w http.ResponseWriter, r *http.Request) {
 		h.startScan("yt_download")
 	}()
 
-	h.json(w, http.StatusAccepted, map[string]any{
-		"ok":      true,
-		"message": "Lagu sedang didownload ke server dan akan otomatis terindeks di library setelah selesai.",
+	h.json(w, http.StatusOK, map[string]any{
+		"message": "Unduhan YouTube Music dimulai di latar belakang. Lagu akan otomatis muncul di library setelah selesai.",
+		"id":      id,
 	})
 }

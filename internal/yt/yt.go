@@ -225,7 +225,7 @@ func (s *Service) ResolveStream(ctx context.Context, id string) (string, error) 
 	cmdCtx, cancel := context.WithTimeout(ctx, 20*time.Second)
 	defer cancel()
 
-	cmd := exec.CommandContext(cmdCtx, bin, "-g", "-f", "bestaudio", "https://www.youtube.com/watch?v="+id)
+	cmd := exec.CommandContext(cmdCtx, bin, "-g", "-f", "ba[ext=m4a]/ba[ext=mp3]/bestaudio/ba", "https://www.youtube.com/watch?v="+id)
 	out, err := cmd.Output()
 	if err != nil {
 		return "", fmt.Errorf("resolve stream url failed: %w", err)
