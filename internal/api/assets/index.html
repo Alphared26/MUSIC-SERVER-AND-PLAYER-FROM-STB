@@ -5118,8 +5118,7 @@ views.streaming = {
 
 window.playYtTrackByIndex = function(idx){
   if(!window._ytResults || !window._ytResults[idx]) return;
-  const t = window._ytResults[idx];
-  const trk = {
+  const list = window._ytResults.map(t => ({
     id: 'yt_' + t.id,
     yt_id: t.id,
     title: t.title,
@@ -5130,11 +5129,12 @@ window.playYtTrackByIndex = function(idx){
     stream_url: '/api/yt/stream/' + t.id,
     format: 'STREAM',
     is_yt: true
-  };
-  state.queue = [trk];
-  state.qi = 0;
+  }));
+  state.queue = list;
+  state.qi = idx;
   load(true);
-  toast('Memutar streaming: ' + t.title);
+  if(typeof renderQueueDrawer === 'function') renderQueueDrawer();
+  toast('Memutar streaming: ' + window._ytResults[idx].title + ' (' + (idx + 1) + '/' + list.length + ')');
 };
 
 window.downloadYtTrack = async function(id, title){
