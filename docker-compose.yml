@@ -1,0 +1,42 @@
+version: '3.8'
+
+services:
+  flac-server:
+    image: flac-server:latest
+    container_name: flac-server
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    volumes:
+      - /mnt/music:/music:ro
+      - /mnt/music_writable:/music_writable:rw
+      - /DATA/AppData/flac-server:/data
+    environment:
+      - CONFIG_PATH=/config.yaml
+      - GOGC=50
+      - GOMEMLIMIT=80MiB
+    deploy:
+      resources:
+        limits:
+          memory: 120M
+        reservations:
+          memory: 40M
+    labels:
+      - "casaos.name=FLAC Streaming Server"
+      - "casaos.category=Media"
+      - "casaos.description=Bit-perfect FLAC/MP3 streaming + web management UI"
+      - "casaos.port=8080"
+      - "casaos.webui=http://[IP]:8080/web/"
+      - "casaos.icon=https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/flac.svg"
+    networks:
+      - flac-net
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:8080/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+networks:
+  flac-net:
+    driver: bridge

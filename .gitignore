@@ -1,0 +1,43 @@
+# Binaries
+/server
+/server.exe
+*.exe
+*.dll
+*.so
+*.dylib
+dist/
+build/
+
+# Config & Credentials
+config.yaml
+*.local.yaml
+.env
+.env.*
+
+# Local Database & Storage
+*.db
+*.db-wal
+*.db-shm
+/art/
+/music/
+/data/
+library.db
+
+# Backups & Temporary files
+backups/
+*.bak
+*.bak.*
+tmp/
+*.tmp
+*.log
+temp_check.js
+extracted_bundle.js
+apply_*.py
+
+# IDE & OS
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.swp
+*.swo

@@ -1,0 +1,53 @@
+# flac-server configuration file
+server:
+  host: "0.0.0.0"
+  port: 8082
+  read_timeout: 30s
+  write_timeout: 300s
+  idle_timeout: 120s
+  trusted_proxies:
+    - "172.16.0.0/12"
+    - "10.0.0.0/8"
+    - "192.168.0.0/16"
+
+library:
+  music_root: "/mnt/hdd/music"           # Path ke direktori file musik Anda
+  music_writable: "/mnt/hdd/music_writable" # Path untuk file musik yang diizinkan diedit/upload
+  extensions: [".flac", ".mp3", ".wav"]
+  scan_interval: 300                    # Auto-scan interval (detik)
+  extract_art: true
+  art_max_size: 500                     # Max cover art dimension (px)
+  art_cache_dir: "/mnt/hdd/art"         # Cache direktori cover art
+
+database:
+  path: "/mnt/hdd/AppData/flac-server/library.db"
+  wal_mode: true
+  busy_timeout: 5000
+  max_open_conns: 10
+  max_idle_conns: 5
+
+streaming:
+  chunk_size: 65536                     # 64 KB per chunk
+  sendfile: true                        # Zero-copy kernel sendfile
+  max_range_size: 10485760              # 10 MB range limit
+
+mdns:
+  enabled: false
+
+logging:
+  level: "info"                         # debug, info, warn, error
+  format: "json"                        # json, text
+
+auth:
+  enabled: true
+  cloudflare_access: false
+  local_users:
+    - username: "admin"
+      # Password hash (bcrypt). Ganti dengan hash password Anda sendiri.
+      # Contoh generator: htpasswd -bnBC 10 "" password
+      password_hash: "$2a$10$YourBcryptPasswordHashHere..."
+  session_ttl: 24h
+  csrf: true
+
+upload:
+  max_file_size: 524288000              # 500 MB per file
