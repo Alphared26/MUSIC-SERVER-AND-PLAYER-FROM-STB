@@ -4669,6 +4669,27 @@ async function saveLrcText(id, text){
     toast('Isi lirik tidak boleh kosong', 'err');
     return;
   }
+  const cur = (S.queue && S.queue[S.qi]) || (state.queue && state.queue[state.qi]) || state.cur;
+  const isYt = String(id).startsWith('yt_') || (cur && cur.is_yt && (cur.id === id || 'yt_' + cur.yt_id === id));
+  if(isYt){
+    try{
+      const rawId = String(id).replace(/^yt_/, '');
+      localStorage.setItem('yt_lrc_' + id, text);
+      localStorage.setItem('yt_lrc_' + rawId, text);
+      localStorage.setItem('yt_lrc_yt_' + rawId, text);
+      lyrCache.delete(id);
+      lyrCache.delete(rawId);
+      lyrCache.delete('yt_' + rawId);
+      if(cur && cur.id) lyrCache.delete(cur.id);
+      toast('Lirik streaming disimpan (client override)!', 'ok');
+      if($('#lrcModal')) $('#lrcModal').style.display = 'none';
+      if($('#lrcSearchModal')) $('#lrcSearchModal').style.display = 'none';
+      onTrackChange();
+    }catch(e){
+      toast('Gagal simpan lirik: '+e.message, 'err');
+    }
+    return;
+  }
   try{
     const r = await fetch('/api/tracks/'+id+'/lrc', {
       method: 'POST',
@@ -4708,6 +4729,7 @@ async function openLrcSearch(id, title, artist){
         '<div style="display:flex;gap:8px">' +
           '<input id="lrcSearchInput" type="text" placeholder="Judul + Artis…" style="flex:1;min-width:0;background:#000;color:var(--fg);border:1px solid var(--line);border-radius:6px;padding:8px 10px;font-size:13px">' +
           '<button id="lrcSearchBtn" class="btn primary">Cari</button>' +
+          '<button id="lrcManualBtn" class="btn" style="background:rgba(255,255,255,0.08)" title="Tulis atau paste teks LRC manual">✏️ Manual</button>' +
         '</div>' +
         '<div id="lrcSearchResults" style="overflow-y:auto;max-height:45vh;display:flex;flex-direction:column;gap:6px;font-size:13px"></div>' +
         '<div id="lrcSearchPreviewWrap" style="display:none;flex-direction:column;gap:6px">' +
@@ -4715,6 +4737,7 @@ async function openLrcSearch(id, title, artist){
           '<textarea id="lrcSearchPreview" rows="8" readonly style="width:100%;font-family:monospace;font-size:12px;box-sizing:border-box;background:#000;color:var(--fg);border:1px solid var(--line);border-radius:6px;padding:10px"></textarea>' +
         '</div>' +
         '<div style="display:flex;gap:8px;justify-content:flex-end">' +
+          '<button class="btn" id="lrcResetBtn" style="display:none;background:#da363322;color:#f85149" title="Hapus override dan kembalikan ke auto LRCLIB">Reset Auto</button>' +
           '<button class="btn" onclick="$(\'#lrcSearchModal\').style.display=\'none\'">Tutup</button>' +
           '<button id="lrcSearchApply" class="btn primary" style="display:none">Simpan ke Lagu</button>' +
         '</div>' +
@@ -4731,6 +4754,33 @@ async function openLrcSearch(id, title, artist){
   $('#lrcSearchPreviewWrap').style.display = 'none';
   $('#lrcSearchApply').style.display = 'none';
   $('#lrcSearchModal').style.display = 'flex';
+
+  const cur = (S.queue && S.queue[S.qi]) || (state.queue && state.queue[state.qi]) || state.cur;
+  const isYt = String(id).startsWith('yt_') || (cur && cur.is_yt);
+  const rawId = String(id).replace(/^yt_/, '');
+  const hasOverride = isYt && Boolean(localStorage.getItem('yt_lrc_' + id) || localStorage.getItem('yt_lrc_' + rawId) || localStorage.getItem('yt_lrc_yt_' + rawId));
+  if($('#lrcResetBtn')){
+    $('#lrcResetBtn').style.display = hasOverride ? 'inline-block' : 'none';
+    $('#lrcResetBtn').onclick = () => {
+      localStorage.removeItem('yt_lrc_' + id);
+      localStorage.removeItem('yt_lrc_' + rawId);
+      localStorage.removeItem('yt_lrc_yt_' + rawId);
+      lyrCache.delete(id);
+      lyrCache.delete(rawId);
+      lyrCache.delete('yt_' + rawId);
+      if(cur && cur.id) lyrCache.delete(cur.id);
+      toast('Override lirik dihapus, kembali ke auto LRCLIB', 'ok');
+      $('#lrcSearchModal').style.display = 'none';
+      onTrackChange();
+    };
+  }
+  if($('#lrcManualBtn')){
+    $('#lrcManualBtn').onclick = () => {
+      $('#lrcSearchModal').style.display = 'none';
+      openLrcEditor(id, title);
+    };
+  }
+
   // Jika sedang full screen, pindahkan modal ke dalam container full screen agar tidak tertutup layer OS
   if(document.fullscreenElement && $('#fs').classList.contains('on')){
     $('#fs').appendChild($('#lrcSearchModal'));
@@ -4811,9 +4861,57 @@ async function doSearchLrc(id){
 }
 
 async function openLrcEditor(id, title){
+  if(!$('#lrcModal')){
+    const modalHtml = '<div id="lrcModal" style="display:none;position:fixed;inset:0;z-index:300;background:#000b;backdrop-filter:blur(6px);align-items:center;justify-content:center;padding:16px">' +
+      '<div style="background:var(--bg-card);border:1px solid var(--line);border-radius:10px;padding:20px;max-width:600px;width:100%;display:flex;flex-direction:column;gap:12px">' +
+        '<div style="display:flex;align-items:center;justify-content:space-between">' +
+          '<div id="lrcModalTitle" style="font-weight:600;font-size:15px"></div>' +
+          '<button class="btn sm" onclick="$(\'#lrcModal\').style.display=\'none\'">✕</button>' +
+        '</div>' +
+        '<textarea id="lrcModalText" rows="14" placeholder="Paste teks .lrc di sini&#10;Contoh:&#10;[00:12.34]Baris pertama lirik&#10;[00:16.78]Baris kedua lirik..." style="width:100%;font-family:monospace;font-size:12px;box-sizing:border-box;background:#000;color:var(--fg);border:1px solid var(--line);border-radius:6px;padding:10px"></textarea>' +
+        '<div style="display:flex;gap:8px;justify-content:flex-end">' +
+          '<button class="btn" onclick="$(\'#lrcModal\').style.display=\'none\'">Batal</button>' +
+          '<button id="lrcModalSave" class="btn primary">Simpan</button>' +
+        '</div>' +
+      '</div>' +
+    '</div>';
+    document.body.insertAdjacentHTML('beforeend', modalHtml);
+  }
+
   $('#lrcModalTitle').textContent = 'Lirik: ' + title;
   $('#lrcModalText').value = 'Memuat…';
   $('#lrcModal').style.display = 'flex';
+  if(document.fullscreenElement && $('#fs').classList.contains('on')){
+    $('#fs').appendChild($('#lrcModal'));
+  } else {
+    document.body.appendChild($('#lrcModal'));
+  }
+
+  const cur = (S.queue && S.queue[S.qi]) || (state.queue && state.queue[state.qi]) || state.cur;
+  const isYt = String(id).startsWith('yt_') || (cur && cur.is_yt);
+  if(isYt){
+    const rawId = String(id).replace(/^yt_/, '');
+    const saved = localStorage.getItem('yt_lrc_' + id) || localStorage.getItem('yt_lrc_' + rawId) || localStorage.getItem('yt_lrc_yt_' + rawId);
+    if(saved){
+      $('#lrcModalText').value = saved;
+    } else {
+      try{
+        const u = 'https://lrclib.net/api/get?artist_name='+encodeURIComponent((cur && cur.artist) || '')+'&track_name='+encodeURIComponent((cur && cur.title) || title);
+        const r = await fetch(u);
+        if(r.ok){
+          const d = await r.json();
+          $('#lrcModalText').value = d.syncedLyrics || d.plainLyrics || '';
+        } else {
+          $('#lrcModalText').value = '';
+        }
+      }catch(_){
+        $('#lrcModalText').value = '';
+      }
+    }
+    $('#lrcModalSave').onclick = () => saveLrcText(id, $('#lrcModalText').value);
+    return;
+  }
+
   try{
     const r = await fetch('/rest/getLyricsBySongId.view?id='+encodeURIComponent(id), {credentials:'same-origin'});
     if(r.ok){
@@ -6331,8 +6429,18 @@ function parseLRC(text){
 async function lyricsFor(id){
   if(lyrCache.has(id)) return lyrCache.get(id);
   let out = null;
-  const cur = S.queue[S.qi];
-  // If track is from YouTube Music or has yt_ prefix, query LRCLIB for synced karaoke lyrics
+
+  // 1. Cek custom override dari localStorage (0 STB load, 0ms latency)
+  const cur = (S.queue && S.queue[S.qi]) || (state.queue && state.queue[state.qi]) || state.cur;
+  const rawId = String(id).replace(/^yt_/, '');
+  const savedLrc = localStorage.getItem('yt_lrc_' + id) || localStorage.getItem('yt_lrc_' + rawId) || localStorage.getItem('yt_lrc_yt_' + rawId) || localStorage.getItem('custom_lrc_' + id);
+  if(savedLrc){
+    out = parseLRC(savedLrc);
+    lyrCache.set(id, out);
+    return out;
+  }
+
+  // 2. If track is from YouTube Music or has yt_ prefix, query LRCLIB for synced karaoke lyrics
   if(String(id).startsWith('yt_') || (cur && cur.is_yt)){
     if(cur && cur.title && cur.artist){
       try{
@@ -6789,7 +6897,13 @@ $('#fsFav').onclick = () => {
 
 $('#pEditBtn').onclick = $('#fsEdit').onclick = () => {
   const cur = (S.queue && S.queue[S.qi]) || (state.queue && state.queue[state.qi]) || state.cur;
-  if(cur) openEditModal(cur);
+  if(cur){
+    if(cur.is_yt || String(cur.id).startsWith('yt_')){
+      openLrcEditor(cur.id, nameOf(cur));
+      return;
+    }
+    openEditModal(cur);
+  }
 };
 
 let currentEditingTrack = null;
