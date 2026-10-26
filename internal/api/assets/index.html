@@ -1433,122 +1433,762 @@ input[type=range].spot-bar:active::-webkit-slider-thumb{opacity:1;transform:scal
 @keyframes mq{from{transform:translateX(0)}to{transform:translateX(-50%)}}
 .mq:hover{animation-play-state:paused}
 
-/* Responsive */
-@media(max-width:768px){
-  #sidebar{width:64px;padding:12px 4px}
-  .brand span, .nav-title, .nav-item span, .side-footer{display:none}
-  .brand{justify-content:center;padding:0 0 16px}
-  .nav-item{justify-content:center;padding:10px 0}
-  #lyrPanel, #upDock{left:64px}
+/* Responsive: Spotify Mobile Experience */
+#mobileBottomNav{display:none}
+
+@media(max-width: 768px), (max-height: 500px){
+  /* Sembunyikan sidebar desktop di mobile sepenuhnya, ganti Spotify Bottom Navigation Bar */
+  #sidebar{display:none !important}
+  #lyrPanel, #upDock{left:0 !important; width:100% !important}
   
-  /* Bottom Player Mobile */
-  #player{padding:0 12px;height:72px}
-  .p-left{width:auto;flex:1;min-width:0;gap:8px}
-  .p-left img{width:44px;height:44px}
-  #pTitle{font-size:13px}
-  #pMeta{font-size:11px}
-  .p-center{flex:0 0 auto;width:auto;max-width:none}
-  .p-ctrls{gap:8px}
-  .p-ctrls .btn-ic:not(#pp){display:none} /* di bar mobile, sisakan play/pause saja */
-  .p-seek{display:none}
-  .p-right{display:none}
-  .vol-wrap, #lyrBtn, #favBtn{display:none}
+  /* Main Wrap & View: Beri ruang nyaman agar konten tidak terpotong Player & Bottom Nav */
+  #mainWrap{
+    width:100% !important;
+    min-width:0 !important;
+  }
+  #topBar{
+    padding:10px 14px !important;
+    height:54px !important;
+  }
+  .top-search{
+    width:100% !important;
+    max-width:none !important;
+  }
+  .top-search input{
+    padding:8px 12px 8px 34px !important;
+    font-size:13px !important;
+    background:#222 !important;
+    border-radius:20px !important;
+  }
   
-  /* View & Tabel di Mobile */
-  #view{padding:12px 10px 88px}
+  /* View & Grid Mobile */
+  #view{
+    padding:12px 12px calc(env(safe-area-inset-bottom, 0px) + 138px) 12px !important;
+  }
   table{table-layout:fixed}
   table th:nth-child(5), table td:nth-child(5), /* Album */
   table th:nth-child(6), table td:nth-child(6), /* Format */
   table th:nth-child(7), table td:nth-child(7), /* Durasi */
   table th:nth-child(8), table td:nth-child(8), /* Ukuran */
   table th:nth-child(9), table td:nth-child(9)  /* Hapus btn */
-  {display:none}
-  th,td{padding:8px 6px;font-size:13px}
-  .cards{grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:10px}
-  .card{padding:10px}
+  {display:none !important}
+  th,td{padding:10px 6px !important;font-size:13px !important}
+  .cards{grid-template-columns:repeat(auto-fill,minmax(130px,1fr)) !important;gap:12px !important}
+  .card{padding:10px !important;border-radius:10px !important}
   
-  /* Fullscreen Spotify Mode Mobile */
+  /* Spotify Floating Mini Player Bar */
+
+  /* Mini Progress Bar on Floating Player */
+  #miniProgress{
+    position:absolute !important;
+    bottom:0 !important;
+    left:0 !important;
+    right:0 !important;
+    height:2.5px !important;
+    background:rgba(255,255,255,0.12) !important;
+    border-radius:0 0 10px 10px !important;
+    overflow:hidden !important;
+    pointer-events:none !important;
+    z-index:95 !important;
+  }
+  #miniProgressBar{
+    width:0%;
+    height:100% !important;
+    background:var(--acc, #1db954) !important;
+    transition:width 0.1s linear !important;
+  }
+
+  #player{
+    position:fixed !important;
+    bottom:calc(env(safe-area-inset-bottom, 0px) + 54px) !important;
+    left:8px !important;
+    right:8px !important;
+    height:56px !important;
+    padding:0 12px 0 8px !important;
+    border-radius:10px !important;
+    background:rgba(28, 28, 32, 0.96) !important;
+    backdrop-filter:blur(24px) saturate(1.8) !important;
+    -webkit-backdrop-filter:blur(24px) saturate(1.8) !important;
+    border:1px solid rgba(255, 255, 255, 0.1) !important;
+    box-shadow:0 8px 24px rgba(0, 0, 0, 0.6) !important;
+    z-index:90 !important;
+    display:flex !important;
+    align-items:center !important;
+    justify-content:space-between !important;
+  }
+  .p-left{
+    flex:1 !important;
+    min-width:0 !important;
+    gap:10px !important;
+    cursor:pointer !important;
+  }
+  .p-left img{
+    width:40px !important;
+    height:40px !important;
+    border-radius:6px !important;
+    flex-shrink:0 !important;
+  }
+  .p-info{
+    flex:1 !important;
+    min-width:0 !important;
+    display:flex !important;
+    flex-direction:column !important;
+    justify-content:center !important;
+  }
+  #pTitle{font-size:13px !important;font-weight:700 !important;color:#fff !important}
+  #pMeta{font-size:11px !important;color:#b3b3b3 !important;margin-top:1px !important}
+  .fav-btn{display:none !important}
+  .p-left .fav-btn{
+    display:flex !important;
+    align-items:center !important;
+    justify-content:center !important;
+    background:none !important;
+    border:none !important;
+    color:#b3b3b3 !important;
+    cursor:pointer !important;
+    padding:6px !important;
+  }
+  .p-left .fav-btn svg{width:18px !important;height:18px !important}
+  
+  .p-center{
+    flex:0 0 auto !important;
+    width:auto !important;
+    margin:0 !important;
+  }
+  .p-ctrls{gap:8px !important;align-items:center !important}
+  .p-ctrls .p-btn:not(#prev):not(#next){display:none !important}
+  .p-ctrls #prev, .p-ctrls #next{
+    display:flex !important;
+    padding:4px !important;
+    color:#b3b3b3 !important;
+  }
+  .p-ctrls #prev svg, .p-ctrls #next svg{
+    width:18px !important;
+    height:18px !important;
+  }
+  #pp{
+    width:38px !important;
+    height:38px !important;
+    background:#fff !important;
+    color:#000 !important;
+    border-radius:50% !important;
+    box-shadow:0 2px 10px rgba(0,0,0,0.3) !important;
+  }
+  #pp svg{width:20px !important;height:20px !important;fill:#000 !important}
+  .p-timeline{display:none !important}
+  .p-right{display:none !important}
+  
+  /* Spotify Native Mobile Bottom Navigation Bar */
+  #mobileBottomNav{
+    display:flex !important;
+    position:fixed !important;
+    bottom:0 !important;
+    left:0 !important;
+    right:0 !important;
+    height:calc(env(safe-area-inset-bottom, 0px) + 54px) !important;
+    padding-bottom:env(safe-area-inset-bottom, 0px) !important;
+    background:rgba(18, 18, 18, 0.98) !important;
+    backdrop-filter:blur(20px) !important;
+    -webkit-backdrop-filter:blur(20px) !important;
+    border-top:1px solid rgba(255, 255, 255, 0.08) !important;
+    z-index:89 !important;
+    align-items:center !important;
+    justify-content:space-around !important;
+  }
+  .mb-nav-item{
+    flex:1 !important;
+    display:flex !important;
+    flex-direction:column !important;
+    align-items:center !important;
+    justify-content:center !important;
+    background:none !important;
+    border:none !important;
+    color:#888 !important;
+    font-size:10px !important;
+    font-weight:600 !important;
+    gap:3px !important;
+    cursor:pointer !important;
+    padding:4px 0 !important;
+    transition:color .15s ease !important;
+    -webkit-tap-highlight-color:transparent !important;
+  }
+  .mb-nav-item svg{
+    width:22px !important;
+    height:22px !important;
+    fill:currentColor !important;
+  }
+  .mb-nav-item.on{
+    color:var(--acc) !important;
+  }
+  .mb-nav-item.on svg{
+    fill:var(--acc) !important;
+  }
+
+  /* ============================================================== */
+  /* FULLSCREEN SPOTIFY CINEMA MODE ON MOBILE                      */
+  /* Authentic desktop visual fidelity, perfectly scaled for mobile */
+  /* ============================================================== */
   #fs{
-    padding:16px 14px 20px;
-  }
-  #fsTop{
-    margin-bottom:8px;
-  }
-  .fs-badge{display:none}
-  .viz-pills{padding:2px}
-  .viz-pill{padding:3px 8px;font-size:10px}
-  #fsClose{width:32px;height:32px;font-size:14px}
-
-  #fsBody{
+    position:fixed !important;
+    inset:0 !important;
+    height:100dvh !important;
+    max-height:100dvh !important;
+    width:100vw !important;
+    box-sizing:border-box !important;
+    padding:calc(env(safe-area-inset-top, 8px) + 8px) calc(env(safe-area-inset-right, 10px) + 8px) calc(env(safe-area-inset-bottom, 8px) + 8px) calc(env(safe-area-inset-left, 10px) + 8px) !important;
+    display:none;
     flex-direction:column;
-    gap:12px;
-    align-items:stretch;
-    justify-content:flex-start;
-    overflow-y:auto;
-    scrollbar-width:none;
-    -webkit-overflow-scrolling:touch;
+    justify-content:space-between;
+    overflow:hidden !important;
+    touch-action:manipulation;
+    z-index:999 !important;
   }
-  #fsBody::-webkit-scrollbar{display:none}
+  #fs.on{
+    display:flex !important;
+  }
 
+  /* Top Bar Fullscreen */
+  #fsTop{
+    padding:0 !important;
+    margin-bottom:6px !important;
+    min-height:36px !important;
+    display:flex !important;
+    justify-content:space-between !important;
+    align-items:center !important;
+    flex-shrink:0 !important;
+    gap:6px !important;
+    width:100% !important;
+  }
+  .fs-top-left{
+    display:flex !important;
+    align-items:center !important;
+    gap:4px !important;
+    overflow-x:auto !important;
+    scrollbar-width:none !important;
+    flex:1 !important;
+    min-width:0 !important;
+  }
+  .fs-top-left::-webkit-scrollbar{display:none !important}
+  .fs-badge{
+    font-size:10px !important;
+    padding:2px 6px !important;
+    letter-spacing:0.3px !important;
+  }
+  .viz-pills{
+    padding:1px 2px !important;
+    gap:2px !important;
+  }
+  .viz-pill{
+    padding:3px 7px !important;
+    font-size:10px !important;
+    border-radius:12px !important;
+  }
+  #fsPulseToggle{
+    padding:3px 7px !important;
+    font-size:10px !important;
+    border-radius:12px !important;
+  }
+  #fsLyrStyleBtn{
+    margin-left:2px !important;
+    padding:3px 8px !important;
+    font-size:10px !important;
+    border-radius:12px !important;
+    white-space:nowrap !important;
+  }
+  .fs-top-right{
+    display:flex !important;
+    align-items:center !important;
+    gap:6px !important;
+    flex-shrink:0 !important;
+  }
+  #fsEdit, #fsDel{display:none !important}
+  #fsLyrSearch, #fsFav, #fsClose{
+    width:34px !important;
+    height:34px !important;
+    min-width:34px !important;
+    font-size:14px !important;
+    border-radius:50% !important;
+    display:flex !important;
+    align-items:center !important;
+    justify-content:center !important;
+  }
+  #fsClose svg{
+    width:16px !important;
+    height:16px !important;
+  }
+
+  /* Fullscreen Body */
+  #fsBody{
+    flex:1 !important;
+    min-height:0 !important;
+    height:100% !important;
+    width:100% !important;
+    display:flex !important;
+    overflow:hidden !important;
+    margin:0 auto !important;
+    box-sizing:border-box !important;
+  }
   #fsLeft{
-    flex:0 0 auto;
-    max-width:100%;
-    width:100%;
-    gap:8px;
+    display:flex !important;
+    min-height:0 !important;
+    box-sizing:border-box !important;
   }
-  #fsArt img, #fsArt .ph{
-    width:min(32vh, 180px);
-    border-radius:10px;
-    box-shadow:0 12px 30px #000000aa;
-  }
-  #fsVizCanvas{
-    width:min(32vh, 180px);
-    height:28px;
-    margin-top:4px;
-  }
-  #fsInfo{margin-top:0;width:min(32vh, 180px)}
-  #fsTitle{font-size:16px}
-  #fsMeta{font-size:12px;margin-top:2px}
-
-  #fsCtrl{
-    gap:6px;
-    margin-top:2px;
-  }
-  .fs-btns{gap:14px}
-  #fsPp{width:44px;height:44px}
-  #fsPp svg{width:18px;height:18px}
-  .fs-btn svg{width:18px;height:18px}
-  .fs-timeline{gap:8px}
-  .p-time{font-size:11px;min-width:32px}
-  .fs-vol-row{gap:8px}
-  .fs-vol-slot{min-width:32px}
-
   #fsRight{
-    flex:0 0 auto;
-    height:38vh;
-    min-height:220px;
-    max-height:none;
-    width:100%;
+    display:flex !important;
+    min-height:0 !important;
+    min-width:0 !important;
+    box-sizing:border-box !important;
+    overflow-y:auto !important;
+    scrollbar-width:none !important;
   }
-  #fsLyr{
-    padding:16vh 8px 40vh;
-    mask-image:linear-gradient(180deg, transparent 0%, black 10%, black 90%, transparent 100%);
-    -webkit-mask-image:linear-gradient(180deg, transparent 0%, black 10%, black 90%, transparent 100%);
-    text-align:center;
-  }
-  #fsLyr .lrow{
-    font-size:15px;
-    padding:8px 10px;
-    line-height:1.4;
-  }
-  #fsLyr .lrow.act{
-      color:#ffffff;
-      font-size:18px;
-      font-weight:800;
-      text-shadow:0 4px 20px #000000cc;
-      transform:none;
+  #fsRight::-webkit-scrollbar{display:none !important}
+
+  /* ------------------------------------------------------------- */
+  /* FULLSCREEN PORTRAIT: Two-Section Unified Layout                */
+  /* Top section: Artwork, Visualizer, Info, Compact Controls       */
+  /* Bottom section: Live Scrolling Synced Lyrics (No clip)         */
+  /* ------------------------------------------------------------- */
+  @media (orientation: portrait) {
+    #fsBody{
+      flex-direction:column !important;
+      gap:6px !important;
+      justify-content:flex-start !important;
+      height:100% !important;
+      overflow:hidden !important;
     }
+    #fsLeft{
+      flex:0 0 auto !important;
+      width:100% !important;
+      max-width:100% !important;
+      display:flex !important;
+      flex-direction:column !important;
+      align-items:center !important;
+      justify-content:flex-start !important;
+      gap:4px !important;
+      padding:2px 8px !important;
+      transition:all .35s cubic-bezier(0.2, 0, 0, 1) !important;
+    }
+    #fsArt{
+      flex:0 0 auto !important;
+      display:flex !important;
+      align-items:center !important;
+      justify-content:center !important;
+      margin:0 auto !important;
+    }
+    #fsArt img, #fsArt .ph{
+      width:clamp(75px, 13dvh, 98px) !important;
+      height:clamp(75px, 13dvh, 98px) !important;
+      border-radius:10px !important;
+      box-shadow:0 6px 20px rgba(0,0,0,0.6) !important;
+      transition:all .35s cubic-bezier(0.2, 0, 0, 1) !important;
+    }
+    #fsVizCanvas{
+      display:block !important;
+      width:min(85vw, 260px) !important;
+      height:18px !important;
+      margin:2px auto 0 !important;
+      transition:all .35s ease !important;
+    }
+    #fsInfo{
+      width:100% !important;
+      max-width:min(90vw, 340px) !important;
+      margin:2px auto 0 !important;
+      text-align:center !important;
+      transition:all .35s ease !important;
+    }
+    #fsTitle{
+      font-size:clamp(14px, 4vw, 17px) !important;
+      font-weight:700 !important;
+      line-height:1.25 !important;
+      white-space:nowrap !important;
+      overflow:hidden !important;
+      text-overflow:ellipsis !important;
+      transition:all .35s ease !important;
+    }
+    #fsMeta{
+      font-size:11px !important;
+      color:var(--dim) !important;
+      margin-top:2px !important;
+      white-space:nowrap !important;
+      overflow:hidden !important;
+      text-overflow:ellipsis !important;
+    }
+    
+    /* Control Glass Panel (Compact) */
+    #fsCtrl{
+      display:flex !important;
+      flex-direction:column !important;
+      width:100% !important;
+      max-width:min(94vw, 360px) !important;
+      margin:2px auto 0 !important;
+      padding:5px 12px 6px !important;
+      border-radius:14px !important;
+      gap:4px !important;
+      background:rgba(20, 20, 24, 0.65) !important;
+      backdrop-filter:blur(20px) !important;
+      -webkit-backdrop-filter:blur(20px) !important;
+      transition:all .35s cubic-bezier(0.2, 0, 0, 1) !important;
+    }
+    .fs-btns{
+      display:flex !important;
+      gap:14px !important;
+      justify-content:center !important;
+      align-items:center !important;
+    }
+    .fs-btn{
+      width:30px !important;
+      height:30px !important;
+      min-width:30px !important;
+    }
+    .fs-btn svg{
+      width:15px !important;
+      height:15px !important;
+    }
+    #fsPp{
+      width:40px !important;
+      height:40px !important;
+      min-width:40px !important;
+      border-radius:50% !important;
+    }
+    #fsPp svg{
+      width:20px !important;
+      height:20px !important;
+    }
+    .fs-timeline{
+      display:flex !important;
+      align-items:center !important;
+      width:100% !important;
+      gap:6px !important;
+    }
+    #fsSeek{
+      height:4px !important;
+    }
+    .p-time{
+      font-size:10px !important;
+      min-width:28px !important;
+    }
+    .fs-vol-row{
+      display:none !important;
+    }
+
+    /* Right Lyrics Container in Portrait */
+    #fsRight{
+      flex:1 1 auto !important;
+      width:100% !important;
+      max-width:100% !important;
+      margin:0 auto !important;
+      height:100% !important;
+      min-height:0 !important;
+      border:none !important;
+      border-top:none !important;
+      padding-top:4px !important;
+      overflow:hidden !important;
+    }
+    #fsLyr{
+      position:relative !important;
+      width:100% !important;
+      height:100% !important;
+      padding:14vh 10px 18vh 10px !important;
+      mask-image:linear-gradient(180deg, transparent 0%, black 12%, black 88%, transparent 100%) !important;
+      -webkit-mask-image:linear-gradient(180deg, transparent 0%, black 12%, black 88%, transparent 100%) !important;
+      overflow-y:auto !important;
+      -webkit-overflow-scrolling:touch !important;
+      scrollbar-width:none !important;
+    }
+    #fsLyr::-webkit-scrollbar{display:none !important}
+    #fsLyr .lrow{
+      font-size:clamp(14px, 4.2vw, 19px) !important;
+      line-height:1.6 !important;
+      padding:6px 10px !important;
+      text-align:center !important;
+      cursor:pointer !important;
+    }
+    #fsLyr .lrow.act{
+      font-size:clamp(17px, 5.2vw, 23px) !important;
+      transform:scale(1.05) !important;
+      font-weight:700 !important;
+      color:#fff !important;
+      text-shadow:0 0 16px rgba(255,255,255,0.4) !important;
+    }
+    #fsLyr.style-solo{
+      display:flex !important;
+      flex-direction:column !important;
+      justify-content:center !important;
+      align-items:center !important;
+      padding:12px 12px 14vh 12px !important;
+      mask-image:none !important;
+      -webkit-mask-image:none !important;
+    }
+    #fsLyr.style-solo .lrow.act{
+      font-size:clamp(18px, 5.2vw, 25px) !important;
+      transform:none !important;
+      text-align:center !important;
+    }
+
+    /* Cinema Auto-Hide Mode / Elements Hide on Portrait Mobile */
+    #fs.fs-idle #fsTop{
+      opacity:0 !important;
+      pointer-events:none !important;
+      transform:translateY(-16px) !important;
+      transition:all .4s ease !important;
+    }
+    #fs.fs-idle #fsLeft{
+      transform:translateY(-35px) !important;
+      transition:transform .4s ease !important;
+    }
+    #fs.fs-idle #fsArt, #fs.fs-idle #fsVizCanvas, #fs.fs-idle #fsInfo{
+      transform:translateY(-35px) !important;
+      transition:transform .4s ease !important;
+    }
+    #fs.fs-idle #fsCtrl{
+      opacity:0 !important;
+      pointer-events:none !important;
+      max-height:0 !important;
+      padding:0 !important;
+      margin:0 !important;
+      overflow:hidden !important;
+      transform:translateY(16px) !important;
+    }
+    #fs.fs-idle #fsArt img, #fs.fs-idle #fsArt .ph{
+      width:clamp(170px, 28dvh, 230px) !important;
+      height:clamp(170px, 28dvh, 230px) !important;
+      border-radius:16px !important;
+      box-shadow:0 14px 40px rgba(0,0,0,0.85) !important;
+    }
+    #fs.fs-idle #fsVizCanvas{
+      width:min(90vw, 320px) !important;
+      height:36px !important;
+      margin-top:8px !important;
+      filter:drop-shadow(0 0 12px var(--acc, #1db954)) !important;
+    }
+    #fs.fs-idle #fsTitle{
+      font-size:clamp(18px, 5.5vw, 24px) !important;
+      margin-top:6px !important;
+    }
+    #fs.fs-idle #fsMeta{
+      font-size:13px !important;
+      margin-top:4px !important;
+    }
+  }
+
+  /* ------------------------------------------------------------- */
+  /* FULLSCREEN LANDSCAPE: Desktop-Identical Side-by-Side Layout    */
+  /* Left side: Artwork, Metadata, Compact Controls                */
+  /* Right side: Autoscrolling Karaoke Lyrics                      */
+  /* ------------------------------------------------------------- */
+  @media (orientation: landscape) {
+    #fsBody{
+      flex-direction:row !important;
+      gap:14px !important;
+      align-items:stretch !important;
+      justify-content:center !important;
+      height:100% !important;
+      padding:0 8px !important;
+      overflow:hidden !important;
+    }
+    #fsLeft{
+      flex:0 0 min(42vw, 320px) !important;
+      width:min(42vw, 320px) !important;
+      max-width:44vw !important;
+      flex-direction:column !important;
+      align-items:center !important;
+      justify-content:center !important;
+      gap:3px !important;
+      padding:0 4px !important;
+      overflow-y:auto !important;
+      scrollbar-width:none !important;
+      transition:all .35s cubic-bezier(0.2, 0, 0, 1) !important;
+    }
+    #fsLeft::-webkit-scrollbar{display:none !important}
+    
+    #fsArt{
+      flex:0 0 auto !important;
+      display:flex !important;
+      align-items:center !important;
+      justify-content:center !important;
+    }
+    #fsArt img, #fsArt .ph{
+      width:clamp(65px, 20vh, 100px) !important;
+      height:clamp(65px, 20vh, 100px) !important;
+      border-radius:10px !important;
+      box-shadow:0 8px 24px rgba(0,0,0,0.6) !important;
+      transition:all .35s cubic-bezier(0.2, 0, 0, 1) !important;
+    }
+    #fsVizCanvas{
+      display:block !important;
+      width:min(38vw, 220px) !important;
+      height:16px !important;
+      margin-top:2px !important;
+      transition:all .35s ease !important;
+    }
+    #fsInfo{
+      width:100% !important;
+      max-width:min(40vw, 280px) !important;
+      margin:2px auto 0 !important;
+      text-align:center !important;
+      transition:all .35s ease !important;
+    }
+    #fsTitle{
+      font-size:clamp(12px, 2vw, 15px) !important;
+      font-weight:700 !important;
+    }
+    #fsMeta{
+      font-size:10px !important;
+      margin-top:1px !important;
+    }
+    
+    /* Controls in Landscape (Compact) */
+    #fsCtrl{
+      display:flex !important;
+      flex-direction:column !important;
+      width:100% !important;
+      max-width:min(40vw, 280px) !important;
+      margin:2px auto 0 !important;
+      padding:4px 8px !important;
+      border-radius:10px !important;
+      gap:3px !important;
+      background:rgba(20, 20, 24, 0.6) !important;
+      backdrop-filter:blur(16px) !important;
+      -webkit-backdrop-filter:blur(16px) !important;
+      transition:all .35s cubic-bezier(0.2, 0, 0, 1) !important;
+    }
+    .fs-btns{
+      display:flex !important;
+      gap:8px !important;
+      justify-content:center !important;
+      align-items:center !important;
+    }
+    .fs-btn{
+      width:24px !important;
+      height:24px !important;
+      min-width:24px !important;
+    }
+    .fs-btn svg{
+      width:13px !important;
+      height:13px !important;
+    }
+    #fsPp{
+      width:32px !important;
+      height:32px !important;
+      min-width:32px !important;
+      border-radius:50% !important;
+    }
+    #fsPp svg{
+      width:16px !important;
+      height:16px !important;
+    }
+    .fs-timeline{
+      display:flex !important;
+      align-items:center !important;
+      width:100% !important;
+      gap:4px !important;
+    }
+    #fsSeek{
+      height:3px !important;
+    }
+    .p-time{
+      font-size:9px !important;
+      min-width:22px !important;
+    }
+    .fs-vol-row{
+      display:none !important;
+    }
+    
+    /* Right Lyrics Container in Landscape */
+    #fsRight{
+      flex:1 1 0% !important;
+      min-width:0 !important;
+      height:100% !important;
+      border:none !important;
+      border-left:none !important;
+      padding-left:8px !important;
+      overflow:hidden !important;
+    }
+    #fsLyr{
+      position:relative !important;
+      width:100% !important;
+      height:100% !important;
+      padding:10vh 12px 14vh 12px !important;
+      mask-image:linear-gradient(180deg, transparent 0%, black 12%, black 88%, transparent 100%) !important;
+      -webkit-mask-image:linear-gradient(180deg, transparent 0%, black 12%, black 88%, transparent 100%) !important;
+      overflow-y:auto !important;
+      -webkit-overflow-scrolling:touch !important;
+      scrollbar-width:none !important;
+    }
+    #fsLyr::-webkit-scrollbar{display:none !important}
+    #fsLyr .lrow{
+      font-size:clamp(19px, 3.0vw, 25px) !important;
+      line-height:1.45 !important;
+      padding:6px 10px !important;
+      text-align:left !important;
+      cursor:pointer !important;
+    }
+    #fsLyr .lrow.act{
+      font-size:clamp(23px, 3.6vw, 30px) !important;
+      transform:scale(1.03) !important;
+      font-weight:800 !important;
+      color:#fff !important;
+      text-shadow:0 0 16px rgba(255,255,255,0.4) !important;
+    }
+    #fsLyr.style-solo{
+      display:flex !important;
+      flex-direction:column !important;
+      justify-content:center !important;
+      align-items:center !important;
+      padding:10px 10px 10vh 10px !important;
+      mask-image:none !important;
+      -webkit-mask-image:none !important;
+    }
+    #fsLyr.style-solo .lrow.act{
+      font-size:clamp(25px, 4.0vw, 32px) !important;
+      transform:none !important;
+      text-align:center !important;
+      font-weight:800 !important;
+    }
+
+    /* Cinema Auto-Hide Mode / Elements Hide on Landscape Mobile */
+    #fs.fs-idle #fsTop{
+      opacity:0 !important;
+      pointer-events:none !important;
+      transform:translateY(-16px) !important;
+      transition:all .4s ease !important;
+    }
+    #fs.fs-idle #fsLeft{
+      transform:translateY(-22px) !important;
+      transition:transform .4s ease !important;
+    }
+    #fs.fs-idle #fsArt, #fs.fs-idle #fsVizCanvas, #fs.fs-idle #fsInfo{
+      transform:translateY(-22px) !important;
+      transition:transform .4s ease !important;
+    }
+    #fs.fs-idle #fsCtrl{
+      opacity:0 !important;
+      pointer-events:none !important;
+      max-height:0 !important;
+      padding:0 !important;
+      margin:0 !important;
+      overflow:hidden !important;
+    }
+    #fs.fs-idle #fsArt img, #fs.fs-idle #fsArt .ph{
+      width:clamp(100px, 32vh, 145px) !important;
+      height:clamp(100px, 32vh, 145px) !important;
+      border-radius:12px !important;
+      box-shadow:0 8px 30px rgba(0,0,0,0.8) !important;
+    }
+    #fs.fs-idle #fsVizCanvas{
+      width:min(40vw, 260px) !important;
+      height:26px !important;
+      filter:drop-shadow(0 0 10px var(--acc, #1db954)) !important;
+    }
+    #fs.fs-idle #fsTitle{
+      font-size:clamp(14px, 2.4vw, 18px) !important;
+    }
+    #fs.fs-idle #fsMeta{
+      font-size:11px !important;
+    }
+  }
 }
+
 
 /* === SPOTIFY REFINEMENTS (ALBUM, ARTIS, LIBRARY, LYRICS, UPLOAD, FULLSCREEN) === */
 
@@ -2575,6 +3215,10 @@ input[type=range].spot-bar:active::-webkit-slider-thumb{opacity:1;transform:scal
         <svg viewBox="0 0 24 24"><path d="M12.5 3.247a1 1 0 0 0-1 0L4 7.577V20h4.5v-6a1 1 0 0 1 1-1h5a1 1 0 0 1 1 1v6H20V7.577l-7.5-4.33z"/></svg>
         <span>Beranda</span>
       </button>
+      <button class="nav-item" data-v="streaming">
+        <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 14.5v-9l6 4.5-6 4.5z"/></svg>
+        <span>Streaming (YT)</span>
+      </button>
       <button class="nav-item" data-v="tracks">
         <svg viewBox="0 0 24 24"><path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"/></svg>
         <span>Lagu</span>
@@ -2643,6 +3287,7 @@ input[type=range].spot-bar:active::-webkit-slider-thumb{opacity:1;transform:scal
 
 <!-- Spotify Bottom Player Bar -->
 <div id="player">
+  <div id="miniProgress"><div id="miniProgressBar"></div></div>
   <div class="p-left">
     <img id="pCov" alt="" title="Buka Fullscreen (F)">
     <div class="p-info">
@@ -2807,6 +3452,26 @@ input[type=range].spot-bar:active::-webkit-slider-thumb{opacity:1;transform:scal
     </div>
   </div>
 </div>
+
+<!-- Spotify Native Mobile Bottom Navigation Bar -->
+<nav id="mobileBottomNav">
+  <button class="mb-nav-item on" data-v="home">
+    <svg viewBox="0 0 24 24"><path d="M12.5 3.247a1 1 0 0 0-1 0L4 7.577V20h4.5v-6a1 1 0 0 1 1-1h5a1 1 0 0 1 1 1v6H20V7.577l-7.5-4.33z"/></svg>
+    <span>Beranda</span>
+  </button>
+  <button class="mb-nav-item" data-v="streaming">
+    <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 14.5v-9l6 4.5-6 4.5z"/></svg>
+    <span>Streaming</span>
+  </button>
+  <button class="mb-nav-item" data-v="tracks" id="mbNavSearch">
+    <svg viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>
+    <span>Lagu</span>
+  </button>
+  <button class="mb-nav-item" data-v="favorites">
+    <svg viewBox="0 0 24 24"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
+    <span>Disukai</span>
+  </button>
+</nav>
 
 <!-- Modal Edit LRC -->
 <div id="lrcModal">
@@ -3007,7 +3672,16 @@ function nav(){
   $('#nav').querySelectorAll('button[data-v]').forEach(b=>{
     b.classList.toggle('on', b.dataset.v === state.view);
   });
-  $('#scanBtn').style.display = state.view==='library' ? '' : 'none';
+  const mb = $('#mobileBottomNav');
+  if(mb){
+    mb.querySelectorAll('button[data-v]').forEach(b=>{
+      b.classList.toggle('on', b.dataset.v === state.view);
+    });
+  }
+  $('#scanBtn').style.display = (state.view==='library' && !state.isGuest) ? '' : 'none';
+  if(state.isGuest && typeof applyGuestPermissions === 'function'){
+    applyGuestPermissions();
+  }
 }
 function go(v){
   state.view = v;
@@ -3332,8 +4006,8 @@ views.tracks = {async fn(){
 
     const isFav = state.favs && state.favs.has(t.id);
     const favBtn = '<button class="fav-btn ' + (isFav ? 'active' : '') + '" data-fav="' + t.id + '" title="' + (isFav ? 'Hapus dari favorit' : 'Sukai') + '" style="color:' + (isFav ? '#1ed760' : 'var(--dim)') + ';background:none;border:none;cursor:pointer;padding:6px;vertical-align:middle"><svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg></button>';
-    const editBtn = '<button class="edit-btn" data-edit="' + t.id + '" title="Edit Metadata"><svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg></button>';
-    const delBtn = '<button class="btn" data-del="' + t.id + '" style="background:transparent;border:none;color:var(--sp-sub);font-size:16px;cursor:pointer;padding:6px;vertical-align:middle" title="Hapus">✕</button>';
+    const editBtn = state.isGuest ? '' : '<button class="edit-btn" data-edit="' + t.id + '" title="Edit Metadata"><svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg></button>';
+    const delBtn = state.isGuest ? '' : '<button class="btn" data-del="' + t.id + '" style="background:transparent;border:none;color:var(--sp-sub);font-size:16px;cursor:pointer;padding:6px;vertical-align:middle" title="Hapus">✕</button>';
     rows += '<tr class="sp-row ' + (isPlaying ? 'playing' : '') + '" data-tid="' + t.id + '">' +
       '<td class="sp-idx-col">' +
         '<span class="sp-idx-num">' + globalIdx + '</span>' +
@@ -3561,8 +4235,8 @@ views.favorites = {async fn(){
     const isFav = state.favs && state.favs.has(t.id);
 
     const favBtn = '<button class="fav-btn active" data-fav="' + t.id + '" title="Hapus dari favorit" style="color:#1ed760;background:none;border:none;cursor:pointer;padding:6px;vertical-align:middle"><svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg></button>';
-    const editBtn = '<button class="edit-btn" data-edit="' + t.id + '" title="Edit Metadata"><svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg></button>';
-    const delBtn = '<button class="btn" data-del="' + t.id + '" style="background:transparent;border:none;color:var(--sp-sub);font-size:16px;cursor:pointer;padding:6px;vertical-align:middle" title="Hapus">✕</button>';
+    const editBtn = state.isGuest ? '' : '<button class="edit-btn" data-edit="' + t.id + '" title="Edit Metadata"><svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg></button>';
+    const delBtn = state.isGuest ? '' : '<button class="btn" data-del="' + t.id + '" style="background:transparent;border:none;color:var(--sp-sub);font-size:16px;cursor:pointer;padding:6px;vertical-align:middle" title="Hapus">✕</button>';
 
     rows += '<tr class="sp-row ' + (isPlaying ? 'playing' : '') + '" data-tid="' + t.id + '">' +
       '<td class="sp-idx-col">' +
@@ -4265,6 +4939,128 @@ function showBy(kind, value){
     v.innerHTML = '<div class="empty">Gagal: ' + esc(e.message) + '</div>';
   });
 }
+
+/* -------------------------------------------------------- streaming ----*/
+views.streaming = {
+  async fn(){
+    const v = $('#view');
+    v.innerHTML = 
+      '<div class="pad" style="max-width:1000px;margin:0 auto;padding-bottom:120px">' +
+        '<div style="display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:20px;flex-wrap:wrap">' +
+          '<div>' +
+            '<h1 style="font-size:26px;font-weight:800;color:#fff;margin:0 0 6px 0;display:flex;align-items:center;gap:10px">' +
+              '<svg viewBox="0 0 24 24" width="28" height="28" fill="#1ed760"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 14.5v-9l6 4.5-6 4.5z"/></svg>' +
+              'YouTube Music Streaming' +
+            '</h1>' +
+            '<p style="color:var(--dim);font-size:13px;margin:0">Stream audio instan tanpa batas dan simpan lagu favorit langsung ke server STB.</p>' +
+          '</div>' +
+          (state.isGuest ? '<span style="font-size:11px;font-weight:700;background:rgba(255,255,255,0.08);padding:6px 12px;border-radius:16px;color:var(--dim)">AKUN TAMU (READ-ONLY)</span>' : '') +
+        '</div>' +
+
+        '<form id="ytForm" style="display:flex;gap:10px;margin-bottom:24px" onsubmit="event.preventDefault();doYtSearch();">' +
+          '<input type="text" id="ytQuery" placeholder="Cari judul lagu, artis, atau album di YouTube Music..." style="flex:1;padding:12px 16px;background:var(--bg-card);border:1px solid rgba(255,255,255,0.12);border-radius:10px;color:#fff;font-size:14px;outline:none;" autofocus>' +
+          '<button type="submit" class="btn p" style="padding:0 22px;display:flex;align-items:center;gap:8px;font-size:14px;border-radius:10px">' +
+            '<svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>' +
+            '<span>Cari</span>' +
+          '</button>' +
+        '</form>' +
+
+        '<div id="ytContent">' +
+          '<div style="text-align:center;padding:60px 20px;color:var(--dim)">' +
+            '<svg viewBox="0 0 24 24" width="48" height="48" fill="rgba(255,255,255,0.2)" style="margin-bottom:12px"><path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"/></svg>' +
+            '<div style="font-size:15px;color:#ccc;font-weight:600;margin-bottom:4px">Ketik lagu yang ingin dicari</div>' +
+            '<div style="font-size:13px">Lagu akan di-stream langsung dengan kualitas audio terbaik.</div>' +
+          '</div>' +
+        '</div>' +
+      '</div>';
+
+    window.doYtSearch = async function(){
+      const q = $('#ytQuery') ? $('#ytQuery').value.trim() : '';
+      if(!q) return;
+      const box = $('#ytContent');
+      box.innerHTML = '<div class="empty">⏳ Mencari di YouTube Music…</div>';
+      try {
+        const res = await api('/api/yt/search?q=' + encodeURIComponent(q));
+        if(!res || !res.length){
+          box.innerHTML = '<div class="empty">Tidak ada lagu ditemukan untuk "'+esc(q)+'"</div>';
+          return;
+        }
+        window._ytResults = res;
+        box.innerHTML = 
+          '<div style="color:var(--dim);font-size:12px;margin-bottom:12px;font-weight:600">DITEMUKAN ' + res.length + ' LAGU</div>' +
+          '<div class="yt-list" style="display:flex;flex-direction:column;gap:8px">' +
+            res.map((t, idx) => 
+              '<div class="sp-row" style="display:flex;align-items:center;gap:12px;padding:10px 14px;background:var(--bg-card);border-radius:8px;cursor:pointer;transition:background .15s" onclick="playYtTrackByIndex(' + idx + ')">' +
+                '<img src="' + esc(t.thumbnail || '') + '" style="width:48px;height:48px;border-radius:6px;object-fit:cover;background:#222" onerror="this.src=\'\'">' +
+                '<div style="flex:1;min-width:0">' +
+                  '<div style="font-weight:700;color:#fff;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + esc(t.title) + '</div>' +
+                  '<div style="font-size:12px;color:var(--dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:2px">' + esc(t.artist) + (t.album ? ' · ' + esc(t.album) : '') + '</div>' +
+                '</div>' +
+                '<div style="font-size:12px;color:var(--dim);margin:0 10px">' + esc(t.duration) + '</div>' +
+                '<div style="display:flex;align-items:center;gap:6px" onclick="event.stopPropagation()">' +
+                  '<button class="btn" style="padding:6px 12px;font-size:12px;display:flex;align-items:center;gap:4px;border-radius:6px" onclick="playYtTrackByIndex(' + idx + ')">' +
+                    '<svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>' +
+                    '<span>Putar</span>' +
+                  '</button>' +
+                  (!state.isGuest ? 
+                    '<button class="btn" id="dlBtn_' + t.id + '" style="padding:6px 12px;font-size:12px;display:flex;align-items:center;gap:4px;border-radius:6px;background:rgba(255,255,255,0.08)" onclick="downloadYtTrack(\'' + t.id + '\', \'' + esc(t.title).replace(/'/g, "\\'") + '\')">' +
+                      '<svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/></svg>' +
+                      '<span>Simpan</span>' +
+                    '</button>' : '') +
+                '</div>' +
+              '</div>'
+            ).join('') +
+          '</div>';
+      } catch(err) {
+        box.innerHTML = '<div class="empty">Gagal mencari lagu: '+esc(err.message)+'</div>';
+      }
+    };
+  }
+};
+
+window.playYtTrackByIndex = function(idx){
+  if(!window._ytResults || !window._ytResults[idx]) return;
+  const t = window._ytResults[idx];
+  const trk = {
+    id: 'yt_' + t.id,
+    yt_id: t.id,
+    title: t.title,
+    artist: t.artist,
+    album: t.album || 'YouTube Music',
+    duration_ms: (t.duration_sec || 0) * 1000,
+    art_url: t.thumbnail,
+    stream_url: '/api/yt/stream/' + t.id,
+    format: 'STREAM',
+    is_yt: true
+  };
+  state.queue = [trk];
+  state.qi = 0;
+  load(true);
+  toast('Memutar streaming: ' + t.title);
+};
+
+window.downloadYtTrack = async function(id, title){
+  const btn = $('#dlBtn_' + id);
+  if(btn){
+    btn.disabled = true;
+    btn.innerHTML = '⏳ Mengunduh…';
+  }
+  toast('Sedang mengunduh "' + title + '" ke server STB…', 'ok');
+  try {
+    const res = await api('/api/yt/download/' + id, {method: 'POST'});
+    toast(res.message || 'Lagu berhasil disimpan ke library!', 'ok');
+    if(btn){
+      btn.innerHTML = '✓ Tersimpan';
+      btn.style.color = '#1ed760';
+    }
+  } catch(err) {
+    toast('Gagal mengunduh: ' + err.message, 'err');
+    if(btn){
+      btn.disabled = false;
+      btn.innerHTML = 'Gagal (Coba Lagi)';
+    }
+  }
+};
 
 /* ----------------------------------------------------------- upload ----*/
 views.upload = {async fn(){ renderUpload(); }};
@@ -5089,6 +5885,10 @@ function renderVisualizer(){
 
 /* Timeline & Controls Sync */
 audio.addEventListener('timeupdate', () => {
+  const miniBar = document.getElementById('miniProgressBar');
+  if (miniBar && audio.duration) {
+    miniBar.style.width = ((audio.currentTime / audio.duration) * 100) + '%';
+  }
   if(!audio.duration) return;
   const cur = audio.currentTime;
   const tot = audio.duration;
@@ -5268,6 +6068,21 @@ $('#nav').addEventListener('click', e => {
   go(b.dataset.v);
 });
 
+const mbNav = $('#mobileBottomNav');
+if(mbNav){
+  mbNav.addEventListener('click', e => {
+    const b = e.target.closest('button[data-v]');
+    if(!b) return;
+    go(b.dataset.v);
+    if(b.dataset.v === 'tracks'){
+      const q = $('#qTop');
+      if(q){
+        setTimeout(() => { q.focus(); q.scrollIntoView({ behavior: 'smooth', block: 'center' }); }, 100);
+      }
+    }
+  });
+}
+
 $$('#sidebar [data-v]').forEach(b => {
   b.onclick = () => {
     $$('.nav-item').forEach(el => el.classList.remove('on'));
@@ -5293,7 +6108,18 @@ const _fsEl = $('#fs');
 if(_fsEl){
   _fsEl.addEventListener('mousemove', resetFsIdle);
   _fsEl.addEventListener('mousedown', resetFsIdle);
-  _fsEl.addEventListener('touchstart', resetFsIdle);
+  _fsEl.addEventListener('touchstart', (e) => {
+    if(e.target.closest('#fsCtrl, #fsTop, .lrow, input, button, select')){
+      resetFsIdle();
+      return;
+    }
+    if(_fsEl.classList.contains('fs-idle')){
+      resetFsIdle();
+    } else if(S.fsOpen){
+      _fsEl.classList.add('fs-idle');
+      if(fsIdleTimer){ clearTimeout(fsIdleTimer); fsIdleTimer = null; }
+    }
+  }, {passive: true});
 }
 
 /* Fullscreen Mode */
@@ -5332,17 +6158,38 @@ function fsMarquee(el, text){
   }
 }
 
+let fsWakeLock = null;
+async function acquireFsWakeLock(){
+  try{
+    if('wakeLock' in navigator && !fsWakeLock){
+      fsWakeLock = await navigator.wakeLock.request('screen');
+      fsWakeLock.addEventListener('release', () => { fsWakeLock = null; });
+    }
+  }catch(err){}
+}
+function releaseFsWakeLock(){
+  if(fsWakeLock){
+    try{ fsWakeLock.release(); }catch(e){}
+    fsWakeLock = null;
+  }
+}
+document.addEventListener('visibilitychange', () => {
+  if(document.visibilityState === 'visible' && S.fsOpen) acquireFsWakeLock();
+});
+
 function openFS(){
   const t = S.queue[S.qi];
   if(!t){ toast('Pilih lagu dulu', 'err'); return; }
   $('#fs').classList.add('on');
   S.fsOpen = true;
+
   setVolume(typeof volumeLevel !== 'undefined' ? volumeLevel : (audio.volume || 1));
   renderFS();
   S.fsOpen = true;
   resetFsIdle();
   if(vizMode !== 'off') renderVisualizer();
   startLyricRaf();
+  acquireFsWakeLock();
   if(document.documentElement.requestFullscreen) document.documentElement.requestFullscreen().catch(()=>{});
 }
 function closeFS(){
@@ -5352,10 +6199,14 @@ function closeFS(){
   S.fsOpen = false;
   if(vizAnimationId){ cancelAnimationFrame(vizAnimationId); vizAnimationId = null; }
   stopLyricRaf();
+  releaseFsWakeLock();
   if(document.fullscreenElement) document.exitFullscreen().catch(()=>{});
 }
 $('#fsBtn').onclick = $('#pCov').onclick = openFS;
+if($('.p-info')) $('.p-info').onclick = openFS;
 $('#fsClose').onclick = closeFS;
+
+
 let isNativeFs = false;
 document.addEventListener('fullscreenchange', () => {
   if (document.fullscreenElement) {
@@ -5418,12 +6269,18 @@ $('#loginForm').addEventListener('submit', async e => {
       $('#lgErr').textContent = 'Terlalu banyak percobaan. Coba lagi dalam ' + (wait||'beberapa') + ' detik.';
       return;
     }
-    if(!r.ok) throw new Error((await r.json().catch(()=>({}))).error || 'HTTP '+r.status);
+    const loginData = await r.json().catch(()=>({}));
     hideLogin();
     $('#lgPass').value = '';
+    state.username = loginData.username || $('#lgUser').value;
+    state.role = loginData.role || (state.username.toLowerCase() === 'user' ? 'guest' : 'admin');
+    state.isGuest = state.role === 'guest';
+    if(state.isGuest && typeof applyGuestPermissions === 'function'){
+      applyGuestPermissions();
+    }
     nav();
     go(state.view || 'home');
-    toast('Masuk sebagai '+($('#lgUser').value || ''), 'ok');
+    toast('Masuk sebagai '+(state.username || ''), 'ok');
   }catch(err){
     // The server deliberately returns one message for both a wrong user and a
     // wrong password, so never claim which one was wrong.
@@ -5474,6 +6331,23 @@ function parseLRC(text){
 async function lyricsFor(id){
   if(lyrCache.has(id)) return lyrCache.get(id);
   let out = null;
+  const cur = S.queue[S.qi];
+  // If track is from YouTube Music or has yt_ prefix, query LRCLIB for synced karaoke lyrics
+  if(String(id).startsWith('yt_') || (cur && cur.is_yt)){
+    if(cur && cur.title && cur.artist){
+      try{
+        const u = 'https://lrclib.net/api/get?artist_name='+encodeURIComponent(cur.artist)+'&track_name='+encodeURIComponent(cur.title);
+        const r = await fetch(u);
+        if(r.ok){
+          const d = await r.json();
+          const lrc = d.syncedLyrics || d.plainLyrics;
+          if(lrc) out = parseLRC(lrc);
+        }
+      }catch(_){}
+    }
+    lyrCache.set(id, out);
+    return out;
+  }
   try{
     const r = await fetch('/rest/getLyricsBySongId.view?id='+encodeURIComponent(id), {credentials:'same-origin'});
     if(r.ok){
@@ -5548,7 +6422,10 @@ function renderLyrics(box, L, currentSec){
           row.innerHTML = Array.from(text).map(ch => `<span class="ch">${esc(ch)}</span>`).join('');
         }
       }
-      const targetTop = row.offsetTop - box.clientHeight/2 + row.offsetHeight/2;
+      const offsetTop = (row.offsetParent === box) ? row.offsetTop : (row.getBoundingClientRect().top - box.getBoundingClientRect().top + box.scrollTop);
+      const isMobile = window.innerWidth <= 768 || window.innerHeight <= 500;
+      const ratio = isMobile ? 0.38 : 0.50; // Naik ~20% dari posisi tengah pada mobile
+      const targetTop = offsetTop - (box.clientHeight * ratio) + (row.offsetHeight / 2);
       box.scrollTo({top: Math.max(0, targetTop), behavior: 'smooth'});
     }
     box._lastActive = active;
@@ -6152,6 +7029,26 @@ $('#editSaveBtn').onclick = async () => {
   }
 };
 
+function applyGuestPermissions(){
+  if(!state.isGuest) return;
+  const upNav = document.querySelector('button[data-v="upload"]');
+  if(upNav) upNav.style.display = 'none';
+  const lyrNav = document.querySelector('button[data-v="lyrics"]');
+  if(lyrNav) lyrNav.style.display = 'none';
+  const scanBtn = $('#scanBtn');
+  if(scanBtn) scanBtn.style.display = 'none';
+  const libNav = document.querySelector('button[data-v="library"]');
+  if(libNav) libNav.style.display = 'none';
+  const topBar = $('.top-actions') || $('header');
+  if(topBar && !$('#guestBadge')){
+    const b = document.createElement('div');
+    b.id = 'guestBadge';
+    b.style.cssText = 'font-size:11px;font-weight:700;color:var(--dim);background:rgba(255,255,255,0.08);padding:4px 10px;border-radius:12px;letter-spacing:0.5px;';
+    b.innerText = 'TAMU (READ-ONLY)';
+    topBar.prepend(b);
+  }
+}
+
 async function boot(){
   try{
     const r = await fetch('/api/auth/me', {credentials: 'same-origin'});
@@ -6162,6 +7059,11 @@ async function boot(){
         return;
       }
       if(data.username) state.username = data.username;
+      state.isGuest = !!data.is_guest;
+      state.role = data.role;
+      if(state.isGuest){
+        applyGuestPermissions();
+      }
     }
   }catch(_){}
   await loadFavorites();

@@ -46,6 +46,11 @@ auth:
       # Password hash (bcrypt). Ganti dengan hash password Anda sendiri.
       # Contoh generator: htpasswd -bnBC 10 "" password
       password_hash: "$2a$10$YourBcryptPasswordHashHere..."
+      role: "admin"
+    - username: "user"
+      # Akun tamu (read-only): hanya dengar & stream, dilimit 3 sesi bersamaan
+      password_hash: "$2a$10$ukD7S3cB/4hw1Y5C.bIwCOQmhr/oeod0vm8orzJ30lUgfbrybJxUq"
+      role: "guest"
   session_ttl: 24h
   csrf: true
 

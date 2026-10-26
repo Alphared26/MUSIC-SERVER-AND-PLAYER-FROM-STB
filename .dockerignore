@@ -1,0 +1,35 @@
+# Build artifacts
+flac-server
+*.exe
+*.test
+
+# Source control
+.git
+.gitignore
+
+# IDE
+.vscode
+.idea
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Test coverage
+coverage.out
+
+# Temp
+tmp/
+*.tmp
+
+# Documentation
+*.md
+!README.md
+
+# Config local overrides
+config.local.yaml

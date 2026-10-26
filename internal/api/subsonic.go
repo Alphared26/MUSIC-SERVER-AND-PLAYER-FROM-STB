@@ -372,8 +372,6 @@ func (h *Handler) serveImageFile(w http.ResponseWriter, r *http.Request, abs str
 	}
 	w.Header().Set("Content-Type", artContentType(abs))
 	w.Header().Set("Cache-Control", "public, max-age=86400")
-		w.Header().Set("Cache-Control", "public, max-age=31536000, immutable")
-	w.Header().Set("ETag", `"`+strconv.FormatInt(id, 10)+`"`)
 	http.ServeContent(w, r, filepath.Base(abs), info.ModTime(), f)
 }
 
@@ -405,8 +403,20 @@ func (h *Handler) serveArtCacheFile(w http.ResponseWriter, r *http.Request, name
 }
 
 // subStream streams a track at original quality (no transcode params), with
-// Range support, same as the native /api/stream.
+// Range support, same as the native /api/stream. Supports yt_ prefixed IDs for streaming YouTube Music tracks.
 func (h *Handler) subStream(w http.ResponseWriter, r *http.Request) {
+	rawID := r.URL.Query().Get("id")
+	if strings.HasPrefix(rawID, "yt_") {
+		videoID := strings.TrimPrefix(rawID, "yt_")
+		url, err := h.YT.ResolveStream(r.Context(), videoID)
+		if err != nil {
+			h.subErr(w, 70, "yt stream failed: "+err.Error())
+			return
+		}
+		http.Redirect(w, r, url, http.StatusFound)
+		return
+	}
+
 	id, ok := h.subID(r)
 	if !ok {
 		h.subErr(w, 10, "invalid track id")

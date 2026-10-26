@@ -28,15 +28,34 @@ import (
 
 const sessionCookie = "flac_session"
 
-// requireAuth gates write endpoints. With auth disabled every request passes.
+// getSession returns the session info if the session cookie is valid.
+func (h *Handler) getSession(r *http.Request) (SessionInfo, bool) {
+	c, err := r.Cookie(sessionCookie)
+	if err != nil || c.Value == "" {
+		return SessionInfo{}, false
+	}
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	sess, ok := h.sessions[c.Value]
+	if !ok || time.Now().After(sess.Expiry) {
+		return SessionInfo{}, false
+	}
+	return sess, true
+}
+
+func (h *Handler) sessionValid(r *http.Request) bool {
+	_, ok := h.getSession(r)
+	return ok
+}
+
+// requireAuth gates endpoints requiring any authenticated user (admin or guest).
 func (h *Handler) requireAuth(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if !h.Opt.AuthEnabled {
 			next.ServeHTTP(w, r)
 			return
 		}
-		// Cloudflare Access already authenticated the user and injects this
-		// header. Trusting it is the whole point of running behind the tunnel.
+		// Cloudflare Access already authenticated the user and injects this header.
 		if email := r.Header.Get("Cf-Access-Authenticated-User-Email"); email != "" {
 			if h.Opt.TrustedDomain == "" ||
 				strings.HasSuffix(strings.ToLower(email), "@"+strings.ToLower(h.Opt.TrustedDomain)) {
@@ -52,15 +71,31 @@ func (h *Handler) requireAuth(next http.Handler) http.Handler {
 	})
 }
 
-func (h *Handler) sessionValid(r *http.Request) bool {
-	c, err := r.Cookie(sessionCookie)
-	if err != nil {
-		return false
-	}
-	h.mu.Lock()
-	exp, ok := h.sessions[c.Value]
-	h.mu.Unlock()
-	return ok && time.Now().Before(exp)
+// requireAdmin gates mutating endpoints: guests are read-only and blocked here.
+func (h *Handler) requireAdmin(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if !h.Opt.AuthEnabled {
+			next.ServeHTTP(w, r)
+			return
+		}
+		if email := r.Header.Get("Cf-Access-Authenticated-User-Email"); email != "" {
+			if h.Opt.TrustedDomain == "" ||
+				strings.HasSuffix(strings.ToLower(email), "@"+strings.ToLower(h.Opt.TrustedDomain)) {
+				next.ServeHTTP(w, r)
+				return
+			}
+		}
+		sess, ok := h.getSession(r)
+		if !ok {
+			h.fail(w, http.StatusUnauthorized, "authentication required")
+			return
+		}
+		if sess.Role == "guest" {
+			h.fail(w, http.StatusForbidden, "Aksi ini tidak diizinkan untuk akun tamu (read-only)")
+			return
+		}
+		next.ServeHTTP(w, r)
+	})
 }
 
 // login creates a session cookie for a local user (bcrypt hash).
@@ -87,18 +122,53 @@ func (h *Handler) login(w http.ResponseWriter, r *http.Request) {
 			continue
 		}
 		if bcrypt.CompareHashAndPassword([]byte(u.PasswordHash), []byte(req.Password)) == nil {
-			h.clearLoginFails(ip)
+			role := strings.ToLower(u.Role)
+			if role == "" {
+				if strings.EqualFold(u.Username, "user") {
+					role = "guest"
+				} else {
+					role = "admin"
+				}
+			}
+
+			h.mu.Lock()
+			now := time.Now()
+			guestCount := 0
+			for k, s := range h.sessions {
+				if now.After(s.Expiry) {
+					delete(h.sessions, k)
+				} else if s.Role == "guest" {
+					guestCount++
+				}
+			}
+
+			if role == "guest" && guestCount >= 3 {
+				h.mu.Unlock()
+				h.fail(w, http.StatusTooManyRequests, "Batas sesi tamu penuh (maksimal 3 sesi bersamaan). Silakan coba lagi nanti.")
+				return
+			}
+
+			delete(h.loginFails, ip)
 			token := randomToken(32)
 			ttl := h.Opt.SessionTTL
-			h.mu.Lock()
-			h.sessions[token] = time.Now().Add(ttl)
+			h.sessions[token] = SessionInfo{
+				Username: u.Username,
+				Role:     role,
+				Expiry:   now.Add(ttl),
+			}
 			h.mu.Unlock()
+
 			http.SetCookie(w, &http.Cookie{
 				Name: sessionCookie, Value: token, Path: "/",
 				HttpOnly: true, SameSite: http.SameSiteLaxMode,
 				MaxAge: int(ttl.Seconds()),
 			})
-			h.json(w, http.StatusOK, LoginResponse{Token: token, ExpiresIn: int64(ttl.Seconds())})
+			h.json(w, http.StatusOK, map[string]any{
+				"token":      token,
+				"expires_in": int64(ttl.Seconds()),
+				"username":   u.Username,
+				"role":       role,
+			})
 			return
 		}
 	}
@@ -180,18 +250,22 @@ func (h *Handler) logout(w http.ResponseWriter, r *http.Request) {
 // authMe returns whether the caller has a valid session.
 func (h *Handler) authMe(w http.ResponseWriter, r *http.Request) {
 	if !h.Opt.AuthEnabled {
-		h.json(w, http.StatusOK, map[string]any{"authenticated": true, "auth_enabled": false})
+		h.json(w, http.StatusOK, map[string]any{
+			"authenticated": true,
+			"auth_enabled":  false,
+			"username":      "admin",
+			"role":          "admin",
+			"is_guest":      false,
+		})
 		return
 	}
-	valid := h.sessionValid(r)
-	user := ""
-	if valid && len(h.Opt.LocalUsers) > 0 {
-		user = h.Opt.LocalUsers[0].Username
-	}
+	sess, ok := h.getSession(r)
 	h.json(w, http.StatusOK, map[string]any{
-		"authenticated": valid,
+		"authenticated": ok,
 		"auth_enabled":  true,
-		"username":      user,
+		"username":      sess.Username,
+		"role":          sess.Role,
+		"is_guest":      sess.Role == "guest",
 	})
 }
 

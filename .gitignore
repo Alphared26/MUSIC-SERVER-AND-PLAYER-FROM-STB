@@ -28,11 +28,18 @@ backups/
 *.bak
 *.bak.*
 tmp/
+tmp_*/
 *.tmp
 *.log
 temp_check.js
 extracted_bundle.js
 apply_*.py
+patch_*.py
+*.py
+specs/
+specs_*.md
+mobile_copy.json
+internal/api/assets/index_staging.html
 
 # IDE & OS
 .DS_Store

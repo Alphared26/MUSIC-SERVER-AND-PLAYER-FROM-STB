@@ -67,6 +67,7 @@ type AuthConfig struct {
 type User struct {
 	Username     string `yaml:"username"`
 	PasswordHash string `yaml:"password_hash"`
+	Role         string `yaml:"role"` // "admin" (default) or "guest"
 }
 
 type UploadConfig struct {

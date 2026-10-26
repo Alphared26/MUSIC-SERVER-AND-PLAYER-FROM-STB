@@ -22,6 +22,7 @@ import (
 	"flac-server/internal/db"
 	"flac-server/internal/scanner"
 	"flac-server/internal/streamer"
+	"flac-server/internal/yt"
 )
 
 // Options carries runtime settings shared by all handlers.
@@ -37,20 +38,27 @@ type Options struct {
 	LocalUsers     []config.User
 }
 
+type SessionInfo struct {
+	Username string
+	Role     string // "admin" or "guest"
+	Expiry   time.Time
+}
+
 // Handler holds dependencies for every endpoint.
 type Handler struct {
-	DB       *db.DB
-	Scanner  *scanner.Scanner
-	Resolver streamer.Resolver
-	Opt      Options
-	Log      *slog.Logger
-	Version  string
+	DB        *db.DB
+	Scanner   *scanner.Scanner
+	Resolver  streamer.Resolver
+	Opt       Options
+	Log       *slog.Logger
+	Version   string
 	BuildTime string
-	Started  time.Time
+	Started   time.Time
+	YT        *yt.Service
 
 	// mu guards sessions and loginFails.
 	mu         sync.Mutex
-	sessions   map[string]time.Time // cookie value -> expiry
+	sessions   map[string]SessionInfo // cookie value -> session info
 	loginFails map[string]*failWindow
 
 	scan scanState
@@ -76,7 +84,8 @@ func New(d *db.DB, sc *scanner.Scanner, res streamer.Resolver, opt Options, log 
 	return &Handler{
 		DB: d, Scanner: sc, Resolver: res, Opt: opt, Log: log,
 		Version: ver, BuildTime: bt, Started: time.Now(),
-		sessions:   make(map[string]time.Time),
+		YT:         yt.NewService(),
+		sessions:   make(map[string]SessionInfo),
 		loginFails: make(map[string]*failWindow),
 	}
 }
@@ -111,12 +120,17 @@ func (h *Handler) Mount(r chi.Router) {
 	r.Get("/api/artists/{id}", h.getArtist)
 	r.Get("/api/genres", h.listGenres)
 
-	r.Post("/api/scan", h.triggerScan)
 	r.Get("/api/scan/{id}", h.scanStatus)
 
-	// Write endpoints require a valid session.
+	// YouTube Music streaming & search (open/guest/admin)
+	r.Get("/api/yt/search", h.ytSearch)
+	r.Get("/api/yt/stream/{id}", h.ytStream)
+
+	// Admin-only mutating operations (guest cannot upload, delete, edit, or scan)
 	r.Group(func(r chi.Router) {
-		r.Use(h.requireAuth)
+		r.Use(h.requireAdmin)
+		r.Post("/api/scan", h.triggerScan)
+		r.Post("/api/yt/download/{id}", h.ytDownload)
 		r.Post("/api/upload", h.upload)
 		r.Post("/api/upload/chunk", h.uploadChunk)
 		r.Delete("/api/upload/chunk", h.abortChunk)
@@ -127,6 +141,11 @@ func (h *Handler) Mount(r chi.Router) {
 		r.Delete("/api/tracks/{id}/lrc", h.deleteLRC)
 		r.Patch("/api/tracks/{id}", h.updateTrack)
 		r.Post("/api/tracks/{id}/art", h.updateTrackArt)
+	})
+
+	// Authenticated actions (both admin and guest)
+	r.Group(func(r chi.Router) {
+		r.Use(h.requireAuth)
 		r.Get("/api/favorites", h.listFavorites)
 		r.Post("/api/tracks/{id}/favorite", h.addFavorite)
 		r.Delete("/api/tracks/{id}/favorite", h.deleteFavorite)
