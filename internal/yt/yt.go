@@ -90,7 +90,16 @@ func (s *Service) Search(ctx context.Context, query string) ([]Track, error) {
 		return nil, err
 	}
 
-	return parseSearchResults(root), nil
+	res := parseSearchResults(root)
+	if len(res) > 0 {
+		topID := res[0].ID
+		go func() {
+			bgCtx, bgCancel := context.WithTimeout(context.Background(), 10*time.Second)
+			defer bgCancel()
+			_, _ = s.ResolveStream(bgCtx, topID)
+		}()
+	}
+	return res, nil
 }
 
 func parseSearchResults(root map[string]any) []Track {
@@ -212,7 +221,30 @@ func (s *Service) ResolveStream(ctx context.Context, id string) (string, error) 
 	}
 	s.mu.Unlock()
 
-	// Locate yt-dlp
+	// 1. Fast resident resolver on STB localhost
+	reqFast, errReq := http.NewRequestWithContext(ctx, http.MethodGet, "http://127.0.0.1:8089/resolve?id="+id, nil)
+	if errReq == nil {
+		respFast, errDo := s.client.Do(reqFast)
+		if errDo == nil && respFast.StatusCode == http.StatusOK {
+			defer respFast.Body.Close()
+			var res struct {
+				URL string `json:"url"`
+			}
+			if errDec := json.NewDecoder(respFast.Body).Decode(&res); errDec == nil && res.URL != "" {
+				s.mu.Lock()
+				s.cache[id] = cachedURL{
+					url: res.URL,
+					exp: time.Now().Add(3 * time.Hour),
+				}
+				s.mu.Unlock()
+				return res.URL, nil
+			}
+		} else if respFast != nil {
+			respFast.Body.Close()
+		}
+	}
+
+	// 2. Fallback to CLI yt-dlp
 	bin := "/usr/local/bin/yt-dlp"
 	if _, err := os.Stat(bin); err != nil {
 		var errLook error

@@ -84,8 +84,43 @@ func (h *Handler) ytStream(w http.ResponseWriter, r *http.Request) {
 
 	w.WriteHeader(resp.StatusCode)
 	if r.Method != http.MethodHead {
-		_, _ = io.Copy(w, resp.Body)
+		if flusher, ok := w.(http.Flusher); ok {
+			buf := make([]byte, 32*1024)
+			for {
+				n, rErr := resp.Body.Read(buf)
+				if n > 0 {
+					if _, wErr := w.Write(buf[:n]); wErr != nil {
+						break
+					}
+					flusher.Flush()
+				}
+				if rErr != nil {
+					break
+				}
+			}
+		} else {
+			_, _ = io.Copy(w, resp.Body)
+		}
 	}
+}
+
+// ytResolve pre-resolves the streaming URL so it gets cached before playback starts.
+func (h *Handler) ytResolve(w http.ResponseWriter, r *http.Request) {
+	id := chi.URLParam(r, "id")
+	if id == "" {
+		id = r.URL.Query().Get("id")
+	}
+	id = strings.TrimPrefix(id, "yt_")
+	if id == "" {
+		h.fail(w, http.StatusBadRequest, "missing video id")
+		return
+	}
+	u, err := h.YT.ResolveStream(r.Context(), id)
+	if err != nil {
+		h.fail(w, http.StatusBadGateway, "failed to resolve audio stream: "+err.Error())
+		return
+	}
+	h.json(w, http.StatusOK, map[string]any{"id": id, "ok": true, "cached": u != ""})
 }
 
 // ytDownload downloads the audio to the server storage (admin only).

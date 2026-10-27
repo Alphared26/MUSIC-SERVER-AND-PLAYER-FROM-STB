@@ -3579,7 +3579,7 @@ input[type=range].spot-bar:active::-webkit-slider-thumb{opacity:1;transform:scal
 
 
 <div id="toast"></div>
-<audio id="audio" crossorigin="anonymous" preload="auto"></audio>
+<audio id="audio" crossorigin="anonymous" preload="metadata"></audio>
 
 <script>
 const $ = s => document.querySelector(s);
@@ -5118,6 +5118,10 @@ views.streaming = {
           return;
         }
         window._ytResults = res;
+        // Pre-resolve lagu pertama agar saat diklik langsung play tanpa loading
+        if(res && res.length && res[0].id){
+          fetch('/api/yt/resolve/' + encodeURIComponent(res[0].id), {credentials:'same-origin'}).catch(()=>{});
+        }
         box.innerHTML = 
           '<div style="color:var(--dim);font-size:12px;margin-bottom:12px;font-weight:600">DITEMUKAN ' + res.length + ' LAGU</div>' +
           '<div class="yt-list" style="display:flex;flex-direction:column;gap:8px">' +
@@ -5845,6 +5849,20 @@ function playById(id){
     }
   }
 
+  // 1b. Fast Single-Track Fetch: jika belum ada di cache, putar lagu ini langsung tanpa tunggu 2000 lagu
+  if(!immediatePlayed && typeof id === 'number'){
+    fetch('/api/tracks/' + encodeURIComponent(id), {credentials:'same-origin'})
+      .then(r => r.ok ? r.json() : null)
+      .then(t => {
+        if(t && !immediatePlayed){
+          state.queue = [t];
+          state.qi = 0;
+          smoothChangeTrack(0);
+          immediatePlayed = true;
+        }
+      }).catch(()=>{});
+  }
+
   // 2. Fetch antrian lengkap 2000 lagu di background tanpa menahan audio playback
   const s = state.sort || 'added';
   const o = state.order || 'desc';
@@ -6079,6 +6097,18 @@ audio.addEventListener('timeupdate', () => {
     $('#fsSeek').style.setProperty('--fill', pct + '%');
     $('#fsTimeCur').textContent = $('#pTimeCur').textContent;
     $('#fsTimeTot').textContent = $('#pTimeTot').textContent;
+  }
+
+  // Pre-resolve next YouTube track 15 detik sebelum lagu habis agar transisi instan
+  if(tot - cur < 15 && state.queue && state.queue.length > 1){
+    const nextIdx = state.qi + 1 < state.queue.length ? state.qi + 1 : (state.repeat === 'all' ? 0 : -1);
+    if(nextIdx >= 0){
+      const nextT = state.queue[nextIdx];
+      if(nextT && nextT.is_yt && !nextT._preresolved){
+        nextT._preresolved = true;
+        fetch('/api/yt/resolve/' + encodeURIComponent(nextT.id), {credentials:'same-origin'}).catch(()=>{});
+      }
+    }
   }
 });
 

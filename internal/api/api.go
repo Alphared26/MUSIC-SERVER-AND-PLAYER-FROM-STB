@@ -125,6 +125,7 @@ func (h *Handler) Mount(r chi.Router) {
 	// YouTube Music streaming & search (open/guest/admin)
 	r.Get("/api/yt/search", h.ytSearch)
 	r.Get("/api/yt/stream/{id}", h.ytStream)
+	r.Get("/api/yt/resolve/{id}", h.ytResolve)
 
 	// Admin-only mutating operations (guest cannot upload, delete, edit, or scan)
 	r.Group(func(r chi.Router) {
