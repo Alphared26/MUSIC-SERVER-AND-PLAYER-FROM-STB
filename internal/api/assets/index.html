@@ -1688,7 +1688,7 @@ input[type=range].spot-bar:active::-webkit-slider-thumb{opacity:1;transform:scal
     font-size:10px !important;
     border-radius:12px !important;
   }
-  #fsLyrStyleBtn{
+  #fsLyrStyleBtn, #fsLyrOffsetBtn{
     margin-left:2px !important;
     padding:3px 8px !important;
     font-size:10px !important;
@@ -3397,6 +3397,7 @@ input[type=range].spot-bar:active::-webkit-slider-thumb{opacity:1;transform:scal
       </div>
       <button class="viz-pill on" id="fsPulseToggle" title="Toggle Beat Pulse Cover" style="margin-left:8px">💓 Pulse: On</button>
       <button class="viz-pill on" id="fsLyrStyleBtn" title="Ganti Style Lirik Karaoke" style="margin-left:8px">🎤 Lirik: Classic</button>
+      <button class="viz-pill" id="fsLyrOffsetBtn" title="Atur Sinkronisasi Lirik (Offset Waktu)" style="margin-left:8px">⏱️ Sync: 0.00s</button>
     </div>
     <div class="fs-top-right">
       <button class="fs-btn fav-btn" id="fsFav" title="Sukai Lagu"><svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg></button>
@@ -3474,13 +3475,25 @@ input[type=range].spot-bar:active::-webkit-slider-thumb{opacity:1;transform:scal
 </nav>
 
 <!-- Modal Edit LRC -->
-<div id="lrcModal">
-  <div class="m-box">
-    <h3 id="lrcTitle">Edit Lirik LRC</h3>
-    <textarea id="lrcText" rows="15" placeholder="[00:12.34] Teks lirik..."></textarea>
-    <div style="display:flex;justify-content:flex-end;gap:10px">
-      <button class="btn" id="lrcCancel">Batal</button>
-      <button class="btn p" id="lrcSave">Simpan LRC</button>
+<div id="lrcModal" class="modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.75);backdrop-filter:blur(8px);align-items:center;justify-content:center;z-index:9000;padding:16px">
+  <div class="modal-card" style="width:100%;max-width:650px;background:#242424;border-radius:12px;padding:24px;border:1px solid #383838;box-shadow:0 16px 40px rgba(0,0,0,0.8);display:flex;flex-direction:column;gap:12px">
+    <div style="display:flex;justify-content:space-between;align-items:center">
+      <h3 id="lrcTitle" style="margin:0;font-size:18px;color:#fff;font-weight:700">Edit Lirik LRC</h3>
+      <button class="btn-ghost" id="lrcCancelX" style="color:var(--dim);font-size:20px;border:none;background:none;cursor:pointer">✕</button>
+    </div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;background:rgba(255,255,255,0.05);padding:8px 10px;border-radius:6px;font-size:12px">
+      <span style="font-weight:600;color:var(--dim)">⏱️ Enhanced Tag:</span>
+      <button type="button" class="btn sm" id="lrcTagWordBtn" title="Sisipkan waktu kata saat ini di posisi kursor">+ Kata (&lt;time&gt;)</button>
+      <button type="button" class="btn sm" id="lrcTagLineBtn" title="Sisipkan waktu baris saat ini di posisi kursor">+ Baris ([time])</button>
+      <span style="color:var(--dim);margin-left:auto;font-size:11px">Putar lagu &amp; tekan <code>Alt+W</code></span>
+    </div>
+    <textarea id="lrcText" rows="14" placeholder="Paste teks .lrc di sini&#10;Contoh Enhanced LRC:&#10;[00:12.34]&lt;00:12.34&gt;once &lt;00:12.60&gt;again" style="width:100%;font-family:monospace;font-size:12px;box-sizing:border-box;background:#141414;color:#eee;border:1px solid #444;border-radius:6px;padding:10px"></textarea>
+    <div style="display:flex;gap:8px;justify-content:space-between;align-items:center">
+      <span style="font-size:11px;color:var(--dim)">Disimpan langsung di browser (0% beban STB)</span>
+      <div style="display:flex;gap:8px">
+        <button class="btn" id="lrcCancel">Batal</button>
+        <button class="btn p" id="lrcSave">Simpan LRC</button>
+      </div>
     </div>
   </div>
 </div>
@@ -4860,32 +4873,53 @@ async function doSearchLrc(id){
   }
 }
 
+function formatLrcTag(seconds, isWord = true){
+  const s = Math.max(0, seconds || 0);
+  const m = Math.floor(s / 60);
+  const sec = s % 60;
+  const mm = String(m).padStart(2, '0');
+  const ss = (sec < 10 ? '0' : '') + sec.toFixed(2);
+  return isWord ? `<${mm}:${ss}>` : `[${mm}:${ss}]`;
+}
+
+function insertTagAtCursor(ta, tag){
+  if(!ta) return;
+  const start = ta.selectionStart;
+  const end = ta.selectionEnd;
+  const val = ta.value;
+  ta.value = val.substring(0, start) + tag + val.substring(end);
+  ta.selectionStart = ta.selectionEnd = start + tag.length;
+  ta.focus();
+}
+
 async function openLrcEditor(id, title){
-  if(!$('#lrcModal')){
-    const modalHtml = '<div id="lrcModal" style="display:none;position:fixed;inset:0;z-index:300;background:#000b;backdrop-filter:blur(6px);align-items:center;justify-content:center;padding:16px">' +
-      '<div style="background:var(--bg-card);border:1px solid var(--line);border-radius:10px;padding:20px;max-width:600px;width:100%;display:flex;flex-direction:column;gap:12px">' +
-        '<div style="display:flex;align-items:center;justify-content:space-between">' +
-          '<div id="lrcModalTitle" style="font-weight:600;font-size:15px"></div>' +
-          '<button class="btn sm" onclick="$(\'#lrcModal\').style.display=\'none\'">✕</button>' +
-        '</div>' +
-        '<textarea id="lrcModalText" rows="14" placeholder="Paste teks .lrc di sini&#10;Contoh:&#10;[00:12.34]Baris pertama lirik&#10;[00:16.78]Baris kedua lirik..." style="width:100%;font-family:monospace;font-size:12px;box-sizing:border-box;background:#000;color:var(--fg);border:1px solid var(--line);border-radius:6px;padding:10px"></textarea>' +
-        '<div style="display:flex;gap:8px;justify-content:flex-end">' +
-          '<button class="btn" onclick="$(\'#lrcModal\').style.display=\'none\'">Batal</button>' +
-          '<button id="lrcModalSave" class="btn primary">Simpan</button>' +
-        '</div>' +
-      '</div>' +
-    '</div>';
-    document.body.insertAdjacentHTML('beforeend', modalHtml);
+  const modal = $('#lrcModal');
+  if(!modal) return;
+  const ta = $('#lrcText');
+  $('#lrcTitle').textContent = 'Edit Lirik: ' + (title || id);
+  ta.value = 'Memuat…';
+  modal.style.display = 'flex';
+  if(document.fullscreenElement && $('#fs').classList.contains('on')){
+    $('#fs').appendChild(modal);
+  } else {
+    document.body.appendChild(modal);
   }
 
-  $('#lrcModalTitle').textContent = 'Lirik: ' + title;
-  $('#lrcModalText').value = 'Memuat…';
-  $('#lrcModal').style.display = 'flex';
-  if(document.fullscreenElement && $('#fs').classList.contains('on')){
-    $('#fs').appendChild($('#lrcModal'));
-  } else {
-    document.body.appendChild($('#lrcModal'));
+  $('#lrcCancel').onclick = () => { modal.style.display = 'none'; };
+  if($('#lrcCancelX')) $('#lrcCancelX').onclick = () => { modal.style.display = 'none'; };
+
+  if($('#lrcTagWordBtn')){
+    $('#lrcTagWordBtn').onclick = () => insertTagAtCursor(ta, formatLrcTag(audio.currentTime, true));
   }
+  if($('#lrcTagLineBtn')){
+    $('#lrcTagLineBtn').onclick = () => insertTagAtCursor(ta, formatLrcTag(audio.currentTime, false));
+  }
+  ta.onkeydown = (e) => {
+    if((e.altKey && e.key.toLowerCase() === 'w') || (e.ctrlKey && e.code === 'Space')){
+      e.preventDefault();
+      insertTagAtCursor(ta, formatLrcTag(audio.currentTime, true));
+    }
+  };
 
   const cur = (S.queue && S.queue[S.qi]) || (state.queue && state.queue[state.qi]) || state.cur;
   const isYt = String(id).startsWith('yt_') || (cur && cur.is_yt);
@@ -4893,22 +4927,22 @@ async function openLrcEditor(id, title){
     const rawId = String(id).replace(/^yt_/, '');
     const saved = localStorage.getItem('yt_lrc_' + id) || localStorage.getItem('yt_lrc_' + rawId) || localStorage.getItem('yt_lrc_yt_' + rawId);
     if(saved){
-      $('#lrcModalText').value = saved;
+      ta.value = saved;
     } else {
       try{
         const u = 'https://lrclib.net/api/get?artist_name='+encodeURIComponent((cur && cur.artist) || '')+'&track_name='+encodeURIComponent((cur && cur.title) || title);
         const r = await fetch(u);
         if(r.ok){
           const d = await r.json();
-          $('#lrcModalText').value = d.syncedLyrics || d.plainLyrics || '';
+          ta.value = d.syncedLyrics || d.plainLyrics || '';
         } else {
-          $('#lrcModalText').value = '';
+          ta.value = '';
         }
       }catch(_){
-        $('#lrcModalText').value = '';
+        ta.value = '';
       }
     }
-    $('#lrcModalSave').onclick = () => saveLrcText(id, $('#lrcModalText').value);
+    $('#lrcSave').onclick = () => saveLrcText(id, ta.value);
     return;
   }
 
@@ -4917,14 +4951,14 @@ async function openLrcEditor(id, title){
     if(r.ok){
       const j = await r.json();
       const v = j && j['subsonic-response'] && j['subsonic-response'].lyrics;
-      $('#lrcModalText').value = (v && v.value) ? v.value : '';
+      ta.value = (v && v.value) ? v.value : '';
     } else {
-      $('#lrcModalText').value = '';
+      ta.value = '';
     }
   }catch(_){
-    $('#lrcModalText').value = '';
+    ta.value = '';
   }
-  $('#lrcModalSave').onclick = () => saveLrcText(id, $('#lrcModalText').value);
+  $('#lrcSave').onclick = () => saveLrcText(id, ta.value);
 }
 
 async function deleteLrc(id){
@@ -5693,6 +5727,48 @@ if($('#fsLyrStyleBtn')){
     }
     applyLyrStyle(next.id, true);
     toast('Style Lirik: ' + next.label.replace(/^[^\s]+\s/, ''));
+  };
+}
+
+if($('#fsLyrOffsetBtn')){
+  $('#fsLyrOffsetBtn').onclick = (e) => {
+    e.stopPropagation();
+    let pop = $('#lrcOffsetPopover');
+    if(pop){ pop.remove(); return; }
+    pop = document.createElement('div');
+    pop.id = 'lrcOffsetPopover';
+    pop.style.cssText = 'position:fixed;z-index:350;background:var(--bg-card);border:1px solid var(--line);border-radius:8px;padding:12px;box-shadow:0 8px 24px #000c;display:flex;flex-direction:column;gap:8px;font-size:12px;color:var(--fg);min-width:220px;';
+    const rect = $('#fsLyrOffsetBtn').getBoundingClientRect();
+    pop.style.top = (rect.bottom + 8) + 'px';
+    pop.style.left = Math.max(10, Math.min(window.innerWidth - 240, rect.left - 40)) + 'px';
+    
+    pop.innerHTML = '<div style="font-weight:600;display:flex;justify-content:space-between;align-items:center">' +
+      '<span>⏱️ Sinkronisasi Lirik</span>' +
+      '<button class="btn sm" id="closeOffPop">✕</button>' +
+    '</div>' +
+    '<div style="color:var(--dim);font-size:11px">Lirik telat? Geser (-). Lirik kecepatan? Geser (+).</div>' +
+    '<div style="display:flex;gap:6px;align-items:center;justify-content:center;margin-top:4px">' +
+      '<button class="btn sm" id="offM20">-0.2s</button>' +
+      '<button class="btn sm" id="offM05">-0.05s</button>' +
+      '<button class="btn sm" id="offZero" style="font-weight:700">0s</button>' +
+      '<button class="btn sm" id="offP05">+0.05s</button>' +
+      '<button class="btn sm" id="offP20">+0.2s</button>' +
+    '</div>';
+    document.body.appendChild(pop);
+    $('#closeOffPop').onclick = () => pop.remove();
+    $('#offM20').onclick = () => adjustTrackLrcOffset(-0.2);
+    $('#offM05').onclick = () => adjustTrackLrcOffset(-0.05);
+    $('#offZero').onclick = () => adjustTrackLrcOffset(0);
+    $('#offP05').onclick = () => adjustTrackLrcOffset(0.05);
+    $('#offP20').onclick = () => adjustTrackLrcOffset(0.2);
+
+    const onDocClick = (ev) => {
+      if(!pop.contains(ev.target) && ev.target !== $('#fsLyrOffsetBtn')){
+        pop.remove();
+        document.removeEventListener('click', onDocClick);
+      }
+    };
+    setTimeout(() => document.addEventListener('click', onDocClick), 50);
   };
 }
 
@@ -6472,6 +6548,41 @@ $('#loginForm').addEventListener('submit', async e => {
    The server already resolves a sidecar .lrc or an embedded tag; this only
    parses what comes back. Lines with [mm:ss.xx] are synced; a file with none
    is treated as plain text. */
+/* Enhanced LRC word tags, e.g. "<00:12.34>once <00:12.60>again".
+   Returns {text, words:[{start,end|null,text}]} or null when the line has no
+   <mm:ss.xx> tags. Last word gets end=null so the caller can close it at the
+   next line timestamp. */
+function parseWordTags(body, lineStartT){
+  if(!body || body.indexOf('<') < 0) return null;
+  const tag = /<(\d{1,3}):(\d{1,2})(?:[.:](\d{1,3}))?>/g;
+  const marks = [];
+  let m;
+  while((m = tag.exec(body)) !== null){
+    const frac = m[3] ? Number('0.' + m[3]) : 0;
+    marks.push({t: Number(m[1]) * 60 + Number(m[2]) + frac, at: m.index, end: tag.lastIndex});
+  }
+  if(!marks.length) return null;
+  const words = [], plain = [];
+  if(marks[0].at > 0){
+    const lead = body.slice(0, marks[0].at).trim();
+    if(lead){
+      plain.push(lead);
+      words.push({start: lineStartT || 0, end: marks[0].t, text: lead});
+    }
+  }
+  for(let i = 0; i < marks.length; i++){
+    const from = marks[i].end;
+    const to = (i + 1 < marks.length) ? marks[i + 1].at : body.length;
+    const txt = body.slice(from, to).trim();
+    if(txt){
+      plain.push(txt);
+      words.push({start: marks[i].t, end: (i + 1 < marks.length) ? marks[i + 1].t : null, text: txt});
+    }
+  }
+  if(!words.length) return null;
+  return {text: plain.join(' '), words};
+}
+
 function parseLRC(text){
   const meta = {};
   const rows = [];
@@ -6492,8 +6603,14 @@ function parseLRC(text){
     }
     const body = line.replace(stamp, '').trim();
     if(times.length){
-      const content = body || '♪ ♪ ♪';
-      for(const t of times) rows.push({t, text: content, isInst: !body});
+      // Enhanced LRC: <mm:ss.xx> tags give real per-word timing.
+      const wtags = parseWordTags(body, times[0]);
+      const content = wtags ? wtags.text : (body || '♪ ♪ ♪');
+      for(const t of times){
+        const row = {t, text: content, isInst: !content || content === '♪ ♪ ♪'};
+        if(wtags && wtags.words.length) row.words = wtags.words;
+        rows.push(row);
+      }
     }else if(body){
       rows.push({t:null, text: body, isInst: false});
     }
@@ -6559,7 +6676,24 @@ function sylCount(w){
   const m = String(w).toLowerCase().match(SYL_RE);
   return m ? m.length : 1;
 }
-function lineTiming(text, start, end){
+function lineTiming(text, start, end, realWords){
+  // Real per-word timing from Enhanced LRC tags wins over any estimate.
+  if(realWords && realWords.length){
+    const words = [], chars = [];
+    for(let i = 0; i < realWords.length; i++){
+      const w = realWords[i];
+      const wStart = w.start;
+      const wEnd = (w.end != null) ? w.end : ((i + 1 < realWords.length) ? realWords[i + 1].start : end);
+      const d = Math.max(0.001, wEnd - wStart);
+      const per = d / Math.max(1, w.text.length);
+      for(let k = 0; k < w.text.length; k++){
+        chars.push({start: wStart + per * k, end: wStart + per * (k + 1)});
+      }
+      words.push({start: wStart, end: wEnd, text: w.text});
+      if(i + 1 < realWords.length) chars.push({start: wEnd, end: wEnd}); // joining space
+    }
+    return {words, chars, dur: Math.max(0.001, end - start)};
+  }
   let dur = end - start - 0.15;
   if(!(dur > 0.2)) dur = 0.2;
   const tokens = String(text).split(/(\s+)/);
@@ -6592,6 +6726,44 @@ function lineTiming(text, start, end){
   return {words, chars, dur};
 }
 
+function getTrackLrcOffset(trackId){
+  const id = trackId || (S.queue && S.queue[S.qi] && S.queue[S.qi].id) || (state.cur && state.cur.id);
+  if(!id) return 0;
+  const rawId = String(id).replace(/^yt_/, '');
+  const val = localStorage.getItem('lrc_off_' + id) || localStorage.getItem('lrc_off_' + rawId) || localStorage.getItem('lrc_off_yt_' + rawId);
+  return val ? parseFloat(val) || 0 : 0;
+}
+
+function updateFsOffsetBtn(){
+  const btn = $('#fsLyrOffsetBtn');
+  if(!btn) return;
+  const off = getTrackLrcOffset();
+  btn.textContent = '⏱️ ' + (off > 0 ? '+' : '') + off.toFixed(2) + 's';
+  btn.classList.toggle('on', Math.abs(off) > 0.001);
+}
+
+function adjustTrackLrcOffset(deltaSec){
+  const curTrack = (S.queue && S.queue[S.qi]) || (state.queue && state.queue[state.qi]) || state.cur;
+  if(!curTrack) return;
+  const id = curTrack.id;
+  const rawId = String(id).replace(/^yt_/, '');
+  const cur = getTrackLrcOffset(id);
+  const next = deltaSec === 0 ? 0 : Math.round((cur + deltaSec) * 20) / 20;
+  if(Math.abs(next) < 0.001){
+    localStorage.removeItem('lrc_off_' + id);
+    localStorage.removeItem('lrc_off_' + rawId);
+    localStorage.removeItem('lrc_off_yt_' + rawId);
+    toast('Offset lirik di-reset (0.00s)', 'ok');
+  }else{
+    const str = next.toFixed(2);
+    localStorage.setItem('lrc_off_' + id, str);
+    localStorage.setItem('lrc_off_' + rawId, str);
+    localStorage.setItem('lrc_off_yt_' + rawId, str);
+    toast('Offset lirik: ' + (next > 0 ? '+' : '') + str + 's', 'ok');
+  }
+  updateFsOffsetBtn();
+}
+
 function renderLyrics(box, L, currentSec){
   if(!box) return;
   if(!L || !L.lines.length){
@@ -6599,11 +6771,15 @@ function renderLyrics(box, L, currentSec){
     box._lastLines = null;
     return;
   }
+  const curTrack = (S.queue && S.queue[S.qi]) || (state.queue && state.queue[state.qi]) || state.cur;
+  const offset = curTrack ? getTrackLrcOffset(curTrack.id) : 0;
+  const effSec = Math.max(0, currentSec + offset);
+
   const synced = L.synced;
   let active = -1;
   if(synced){
     for(let i = 0; i < L.lines.length; i++){
-      if(L.lines[i].t != null && L.lines[i].t <= currentSec) active = i;
+      if(L.lines[i].t != null && L.lines[i].t <= effSec) active = i;
       else if(L.lines[i].t != null) break;
     }
   }
@@ -6678,7 +6854,7 @@ function renderLyrics(box, L, currentSec){
         const spans = row.querySelectorAll('.w');
         if(spans.length){
           if(!row._T || row._TKey !== lineData.text){
-            row._T = lineTiming(lineData.text, lineStart, lineEnd);
+            row._T = lineTiming(lineData.text, lineStart, lineEnd, lineData.words);
             row._TKey = lineData.text;
           }
           const T = row._T;
@@ -6686,9 +6862,9 @@ function renderLyrics(box, L, currentSec){
             const span = spans[i];
             const w = T && T.words[i];
             let st = 'dim';
-            if(!w || currentSec >= w.end){
+            if(!w || effSec >= w.end){
               st = 'done'; // sudah lewat -> tetap nyala
-            }else if(currentSec >= w.start){
+            }else if(effSec >= w.start){
               st = 'cur';  // sedang dinyanyikan -> membesar & glow
             }
             if(span._st !== st){
@@ -6701,7 +6877,7 @@ function renderLyrics(box, L, currentSec){
         const spans = row.children;
         if(spans.length){
           if(!row._T || row._TKey !== lineData.text){
-            row._T = lineTiming(lineData.text, lineStart, lineEnd);
+            row._T = lineTiming(lineData.text, lineStart, lineEnd, lineData.words);
             row._TKey = lineData.text;
           }
           const T = row._T;
@@ -6710,8 +6886,8 @@ function renderLyrics(box, L, currentSec){
             const c = T && T.chars[i];
             let pct = 0;
             if(c){
-              if(currentSec >= c.end) pct = 100;
-              else if(currentSec > c.start) pct = ((currentSec - c.start) / Math.max(0.001, c.end - c.start)) * 100;
+              if(effSec >= c.end) pct = 100;
+              else if(effSec > c.start) pct = ((effSec - c.start) / Math.max(0.001, c.end - c.start)) * 100;
             }
             const q = Math.round(pct);
             if(span._cp !== q){
@@ -6872,6 +7048,7 @@ function renderFS(){
   }else{
     applyLyrStyle(lyrStyle, false);
   }
+  updateFsOffsetBtn();
   renderLyrics($('#fsLyr'), curLyr, audio.currentTime || 0);
   const fsFav = $('#fsFav');
   if(fsFav){
