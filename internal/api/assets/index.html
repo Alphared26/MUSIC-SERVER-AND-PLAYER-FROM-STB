@@ -6256,7 +6256,13 @@ function fsMarquee(el, text){
   }
 }
 
+/* Keep Screen Awake (Desktop & Mobile Fullscreen) via Hybrid WakeLock + Micro Video Stream */
 let fsWakeLock = null;
+let keepAliveVideo = null;
+let keepAliveStream = null;
+let keepAliveCanvas = null;
+let keepAliveTimer = null;
+
 async function acquireFsWakeLock(){
   try{
     if('wakeLock' in navigator && !fsWakeLock){
@@ -6265,14 +6271,87 @@ async function acquireFsWakeLock(){
     }
   }catch(err){}
 }
+
 function releaseFsWakeLock(){
   if(fsWakeLock){
     try{ fsWakeLock.release(); }catch(e){}
     fsWakeLock = null;
   }
 }
+
+function initKeepAliveMedia(){
+  if(keepAliveVideo) return;
+  keepAliveVideo = document.createElement('video');
+  keepAliveVideo.id = 'fsKeepAliveVideo';
+  keepAliveVideo.setAttribute('playsinline', '');
+  keepAliveVideo.setAttribute('webkit-playsinline', '');
+  keepAliveVideo.setAttribute('muted', '');
+  keepAliveVideo.muted = true;
+  keepAliveVideo.loop = true;
+  keepAliveVideo.style.cssText = 'position:fixed;width:1px;height:1px;opacity:0.001;pointer-events:none;z-index:-9999;bottom:0;left:0;';
+  document.body.appendChild(keepAliveVideo);
+
+  try {
+    keepAliveCanvas = document.createElement('canvas');
+    keepAliveCanvas.width = 2;
+    keepAliveCanvas.height = 2;
+    const ctx = keepAliveCanvas.getContext('2d');
+    ctx.fillStyle = '#000000';
+    ctx.fillRect(0, 0, 2, 2);
+
+    if (keepAliveCanvas.captureStream) {
+      keepAliveStream = keepAliveCanvas.captureStream(1);
+      keepAliveVideo.srcObject = keepAliveStream;
+    } else if (keepAliveCanvas.mozCaptureStream) {
+      keepAliveStream = keepAliveCanvas.mozCaptureStream(1);
+      keepAliveVideo.srcObject = keepAliveStream;
+    }
+  } catch(e) {}
+}
+
+function startKeepAlive(){
+  acquireFsWakeLock();
+  initKeepAliveMedia();
+  if(!keepAliveVideo) return;
+
+  if(keepAliveCanvas && keepAliveStream){
+    if(keepAliveTimer) clearInterval(keepAliveTimer);
+    const ctx = keepAliveCanvas.getContext('2d');
+    let toggle = false;
+    keepAliveTimer = setInterval(() => {
+      if(!S.fsOpen){
+        if(keepAliveTimer){ clearInterval(keepAliveTimer); keepAliveTimer = null; }
+        return;
+      }
+      toggle = !toggle;
+      ctx.fillStyle = toggle ? '#000000' : '#010101';
+      ctx.fillRect(0, 0, 2, 2);
+    }, 1000);
+  }
+
+  try {
+    const p = keepAliveVideo.play();
+    if(p && typeof p.catch === 'function') p.catch(() => {});
+  } catch(e){}
+}
+
+function stopKeepAlive(){
+  releaseFsWakeLock();
+  if(keepAliveTimer){
+    clearInterval(keepAliveTimer);
+    keepAliveTimer = null;
+  }
+  if(keepAliveVideo){
+    try { keepAliveVideo.pause(); } catch(e){}
+  }
+}
+
 document.addEventListener('visibilitychange', () => {
-  if(document.visibilityState === 'visible' && S.fsOpen) acquireFsWakeLock();
+  if(document.visibilityState === 'visible' && S.fsOpen) {
+    startKeepAlive();
+  } else if(document.visibilityState !== 'visible' && S.fsOpen) {
+    stopKeepAlive();
+  }
 });
 
 function openFS(){
@@ -6287,7 +6366,7 @@ function openFS(){
   resetFsIdle();
   if(vizMode !== 'off') renderVisualizer();
   startLyricRaf();
-  acquireFsWakeLock();
+  startKeepAlive();
   if(document.documentElement.requestFullscreen) document.documentElement.requestFullscreen().catch(()=>{});
 }
 function closeFS(){
@@ -6297,7 +6376,7 @@ function closeFS(){
   S.fsOpen = false;
   if(vizAnimationId){ cancelAnimationFrame(vizAnimationId); vizAnimationId = null; }
   stopLyricRaf();
-  releaseFsWakeLock();
+  stopKeepAlive();
   if(document.fullscreenElement) document.exitFullscreen().catch(()=>{});
 }
 $('#fsBtn').onclick = $('#pCov').onclick = openFS;
@@ -6313,6 +6392,7 @@ document.addEventListener('fullscreenchange', () => {
     $('#fs').classList.remove('on');
     S.fsOpen = false;
     stopLyricRaf();
+    stopKeepAlive();
     isNativeFs = false;
   }
 });
@@ -6468,6 +6548,50 @@ async function lyricsFor(id){
   return out;
 }
 
+/* Syllable-weighted timing for a single LRC line.
+   LRC gives one timestamp per line, so word/char positions inside the line are
+   estimated: weight by syllable count (closer to how long a word is actually
+   sung than raw character count), and insert a small pause after punctuation.
+   ponytail: still an estimate — real per-word timing needs Enhanced LRC
+   (<mm:ss.xx> tags) or forced alignment. Upgrade path: parse <..> tags here. */
+const SYL_RE = /[aeiouy]+/gi;
+function sylCount(w){
+  const m = String(w).toLowerCase().match(SYL_RE);
+  return m ? m.length : 1;
+}
+function lineTiming(text, start, end){
+  let dur = end - start - 0.15;
+  if(!(dur > 0.2)) dur = 0.2;
+  const tokens = String(text).split(/(\s+)/);
+  const items = [];
+  for(const tok of tokens){
+    if(/^\s+$/.test(tok)){ items.push({ws: true, w: tok, weight: 0}); continue; }
+    const punct = /[,.;:!?…—]$/.test(tok);
+    items.push({ws: false, w: tok, weight: sylCount(tok) + (punct ? 0.8 : 0)});
+  }
+  const total = items.reduce((s, it) => s + it.weight, 0) || 1;
+  const words = [], chars = [];
+  let cur = start;
+  for(const it of items){
+    if(it.ws){
+      // Whitespace occupies no time but still has a span in the DOM (char mode),
+      // so emit a zero-length entry per character to keep indices aligned.
+      for(let i = 0; i < it.w.length; i++) chars.push({start: cur, end: cur});
+      continue;
+    }
+    const d = dur * (it.weight / total);
+    const wStart = cur, wEnd = cur + d;
+    const plain = it.w;
+    const per = d / Math.max(1, plain.length);
+    for(let i = 0; i < plain.length; i++){
+      chars.push({start: wStart + per * i, end: wStart + per * (i + 1)});
+    }
+    words.push({start: wStart, end: wEnd, text: plain});
+    cur = wEnd;
+  }
+  return {words, chars, dur};
+}
+
 function renderLyrics(box, L, currentSec){
   if(!box) return;
   if(!L || !L.lines.length){
@@ -6519,6 +6643,7 @@ function renderLyrics(box, L, currentSec){
       if(!lineData.isInst){
         const text = lineData.text;
         row._rawText = text;
+        row._T = null; row._TKey = null;
         const isSolo = box.classList.contains('style-solo');
         if(isSolo){
           const words = text.split(/(\s+)/);
@@ -6550,33 +6675,22 @@ function renderLyrics(box, L, currentSec){
         ? L.lines[active+1].t : lineStart + 4; // fallback 4s per line
 
       if(isSolo){
-        const wordSpans = row.querySelectorAll('.w');
-        if(wordSpans.length){
-          let dur = lineEnd - lineStart - 0.25;
-          if(dur < 0.2) dur = 0.2;
-
-          let totalChars = 0;
-          for(let i = 0; i < wordSpans.length; i++){
-            totalChars += (wordSpans[i].textContent || '').length || 1;
+        const spans = row.querySelectorAll('.w');
+        if(spans.length){
+          if(!row._T || row._TKey !== lineData.text){
+            row._T = lineTiming(lineData.text, lineStart, lineEnd);
+            row._TKey = lineData.text;
           }
-          if(!totalChars) totalChars = 1;
-
-          const elapsed = currentSec - lineStart;
-          let curChar = 0;
-          for(let i = 0; i < wordSpans.length; i++){
-            const span = wordSpans[i];
-            const wLen = (span.textContent || '').length || 1;
-            const wStartSec = (curChar / totalChars) * dur;
-            const wEndSec = ((curChar + wLen) / totalChars) * dur;
-            curChar += wLen;
-
+          const T = row._T;
+          for(let i = 0; i < spans.length; i++){
+            const span = spans[i];
+            const w = T && T.words[i];
             let st = 'dim';
-            if(elapsed >= wEndSec || currentSec >= lineEnd){
+            if(!w || currentSec >= w.end){
               st = 'done'; // sudah lewat -> tetap nyala
-            }else if(elapsed >= wStartSec){
+            }else if(currentSec >= w.start){
               st = 'cur';  // sedang dinyanyikan -> membesar & glow
             }
-
             if(span._st !== st){
               span._st = st;
               span.className = 'w ' + st;
@@ -6586,35 +6700,24 @@ function renderLyrics(box, L, currentSec){
       }else{
         const spans = row.children;
         if(spans.length){
-          let dur = lineEnd - lineStart - 0.25;
-          const maxEst = spans.length * 0.16;
-          if(dur > maxEst && (lineEnd - lineStart) > 2){
-            dur = maxEst;
+          if(!row._T || row._TKey !== lineData.text){
+            row._T = lineTiming(lineData.text, lineStart, lineEnd);
+            row._TKey = lineData.text;
           }
-          if(dur < 0.1) dur = 0.1;
-
-          const pct = Math.min(1, Math.max(0, (currentSec - lineStart) / dur));
-          const charPos = pct * spans.length;
-
+          const T = row._T;
           for(let i = 0; i < spans.length; i++){
             const span = spans[i];
-            if(i < Math.floor(charPos)){
-              if(span._cp !== 100){
-                span.style.setProperty('--cp', '100%');
-                span.style.setProperty('--s', '1');
-                span._cp = 100;
-              }
-            }else if(i === Math.floor(charPos)){
-              const partial = (charPos - i) * 100;
-              span.style.setProperty('--cp', partial + '%');
-              span.style.setProperty('--s', (charPos - i).toFixed(2));
-              span._cp = partial;
-            }else{
-              if(span._cp !== 0){
-                span.style.setProperty('--cp', '0%');
-                span.style.setProperty('--s', '0');
-                span._cp = 0;
-              }
+            const c = T && T.chars[i];
+            let pct = 0;
+            if(c){
+              if(currentSec >= c.end) pct = 100;
+              else if(currentSec > c.start) pct = ((currentSec - c.start) / Math.max(0.001, c.end - c.start)) * 100;
+            }
+            const q = Math.round(pct);
+            if(span._cp !== q){
+              span.style.setProperty('--cp', q + '%');
+              span.style.setProperty('--s', (q / 100).toFixed(2));
+              span._cp = q;
             }
           }
         }
