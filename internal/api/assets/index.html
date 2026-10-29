@@ -4496,40 +4496,6 @@ views.lyrics = {async fn(){
       (totalPages > 1 ? '<button class="btn" data-lyrpg="'+(state.lyrPage-1)+'">← Prev</button>' : '') +
       '<span class="hint" style="align-self:center">Halaman '+state.lyrPage+' / '+totalPages+' · '+allTracks.length+' lagu</span>' +
       (totalPages > 1 ? '<button class="btn" data-lyrpg="'+(state.lyrPage+1)+'">Next →</button>' : '') +
-    '</div>' +
-    '<div id="lrcModal" style="display:none;position:fixed;inset:0;z-index:300;background:#000b;backdrop-filter:blur(6px);align-items:center;justify-content:center;padding:16px">' +
-      '<div style="background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:20px;max-width:600px;width:100%;display:flex;flex-direction:column;gap:12px">' +
-        '<div style="display:flex;align-items:center;justify-content:space-between">' +
-          '<div id="lrcModalTitle" style="font-weight:600;font-size:15px"></div>' +
-          '<button class="btn sm" onclick="$(\'#lrcModal\').style.display=\'none\'">✕</button>' +
-        '</div>' +
-        '<textarea id="lrcModalText" rows="14" placeholder="Paste teks .lrc di sini&#10;Contoh:&#10;[00:12.34]Baris pertama lirik&#10;[00:16.78]Baris kedua lirik..." style="width:100%;font-family:monospace;font-size:12px;box-sizing:border-box;background:#0d1117;color:var(--fg);border:1px solid var(--line);border-radius:6px;padding:10px"></textarea>' +
-        '<div style="display:flex;gap:8px;justify-content:flex-end">' +
-          '<button class="btn" onclick="$(\'#lrcModal\').style.display=\'none\'">Batal</button>' +
-          '<button id="lrcModalSave" class="btn primary">Simpan</button>' +
-        '</div>' +
-      '</div>' +
-    '</div>' +
-    '<div id="lrcSearchModal" style="display:none;position:fixed;inset:0;z-index:300;background:#000b;backdrop-filter:blur(6px);align-items:center;justify-content:center;padding:16px">' +
-      '<div style="background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:20px;max-width:680px;width:100%;max-height:90vh;display:flex;flex-direction:column;gap:12px">' +
-        '<div style="display:flex;align-items:center;justify-content:space-between">' +
-          '<div id="lrcSearchTitle" style="font-weight:600;font-size:15px">Cari Lirik Online</div>' +
-          '<button class="btn sm" onclick="$(\'#lrcSearchModal\').style.display=\'none\'">✕</button>' +
-        '</div>' +
-        '<div style="display:flex;gap:8px">' +
-          '<input id="lrcSearchInput" type="text" placeholder="Judul + Artis…" style="flex:1;min-width:0;background:#0d1117;color:var(--fg);border:1px solid var(--line);border-radius:6px;padding:8px 10px;font-size:13px">' +
-          '<button id="lrcSearchBtn" class="btn primary">Cari</button>' +
-        '</div>' +
-        '<div id="lrcSearchResults" style="overflow-y:auto;max-height:45vh;display:flex;flex-direction:column;gap:6px;font-size:13px"></div>' +
-        '<div id="lrcSearchPreviewWrap" style="display:none;flex-direction:column;gap:6px">' +
-          '<div style="color:var(--dim);font-size:12px">Preview lirik:</div>' +
-          '<textarea id="lrcSearchPreview" rows="8" readonly style="width:100%;font-family:monospace;font-size:12px;box-sizing:border-box;background:#0d1117;color:var(--fg);border:1px solid var(--line);border-radius:6px;padding:10px"></textarea>' +
-        '</div>' +
-        '<div style="display:flex;gap:8px;justify-content:flex-end">' +
-          '<button class="btn" onclick="$(\'#lrcSearchModal\').style.display=\'none\'">Tutup</button>' +
-          '<button id="lrcSearchApply" class="btn primary" style="display:none">Simpan ke Lagu</button>' +
-        '</div>' +
-      '</div>' +
     '</div>';
 
   $('#view').querySelectorAll('[data-lyrpg]').forEach(b=>{
@@ -4733,11 +4699,11 @@ let activeSelectedLrcText = null;
 async function openLrcSearch(id, title, artist){
   // Pastikan lrcSearchModal sudah ada di DOM (dibuat global agar bisa dipanggil dari FS)
   if(!$('#lrcSearchModal')){
-    const modalHtml = '<div id="lrcSearchModal" style="display:none;position:fixed;inset:0;z-index:300;background:#000b;backdrop-filter:blur(6px);align-items:center;justify-content:center;padding:16px">' +
+    const modalHtml = '<div id="lrcSearchModal" style="display:none;position:fixed;inset:0;z-index:9100;background:#000b;backdrop-filter:blur(6px);align-items:center;justify-content:center;padding:16px">' +
       '<div style="background:var(--bg-card);border:1px solid var(--line);border-radius:10px;padding:20px;max-width:680px;width:100%;max-height:90vh;display:flex;flex-direction:column;gap:12px">' +
         '<div style="display:flex;align-items:center;justify-content:space-between">' +
           '<div id="lrcSearchTitle" style="font-weight:600;font-size:15px">Cari Lirik Online</div>' +
-          '<button class="btn sm" onclick="$(\'#lrcSearchModal\').style.display=\'none\'">✕</button>' +
+          '<button id="lrcSearchCloseX" class="btn sm">✕</button>' +
         '</div>' +
         '<div style="display:flex;gap:8px">' +
           '<input id="lrcSearchInput" type="text" placeholder="Judul + Artis…" style="flex:1;min-width:0;background:#000;color:var(--fg);border:1px solid var(--line);border-radius:6px;padding:8px 10px;font-size:13px">' +
@@ -4751,7 +4717,7 @@ async function openLrcSearch(id, title, artist){
         '</div>' +
         '<div style="display:flex;gap:8px;justify-content:flex-end">' +
           '<button class="btn" id="lrcResetBtn" style="display:none;background:#da363322;color:#f85149" title="Hapus override dan kembalikan ke auto LRCLIB">Reset Auto</button>' +
-          '<button class="btn" onclick="$(\'#lrcSearchModal\').style.display=\'none\'">Tutup</button>' +
+          '<button class="btn" id="lrcSearchCloseBtn">Tutup</button>' +
           '<button id="lrcSearchApply" class="btn primary" style="display:none">Simpan ke Lagu</button>' +
         '</div>' +
       '</div>' +
@@ -4801,6 +4767,8 @@ async function openLrcSearch(id, title, artist){
     document.body.appendChild($('#lrcSearchModal'));
   }
   
+  $('#lrcSearchCloseX').onclick = () => { $('#lrcSearchModal').style.display = 'none'; };
+  $('#lrcSearchCloseBtn').onclick = () => { $('#lrcSearchModal').style.display = 'none'; };
   $('#lrcSearchBtn').onclick = () => doSearchLrc(id);
   $('#lrcSearchInput').onkeydown = (e) => { if(e.key === 'Enter') doSearchLrc(id); };
   $('#lrcSearchApply').onclick = () => {
@@ -4942,7 +4910,7 @@ async function openLrcEditor(id, title){
         ta.value = '';
       }
     }
-    $('#lrcSave').onclick = () => saveLrcText(id, ta.value);
+    $('#lrcSave').onclick = () => saveLrcText(id, $('#lrcText').value);
     return;
   }
 
@@ -4958,7 +4926,7 @@ async function openLrcEditor(id, title){
   }catch(_){
     ta.value = '';
   }
-  $('#lrcSave').onclick = () => saveLrcText(id, ta.value);
+  $('#lrcSave').onclick = () => saveLrcText(id, $('#lrcText').value);
 }
 
 async function deleteLrc(id){
@@ -6302,8 +6270,16 @@ function resetFsIdle(){
   if(!fs) return;
   fs.classList.remove('fs-idle');
   if(fsIdleTimer){ clearTimeout(fsIdleTimer); fsIdleTimer = null; }
+  const hasOpenModal = ($('#lrcModal') && $('#lrcModal').style.display !== 'none') ||
+                       ($('#lrcSearchModal') && $('#lrcSearchModal').style.display !== 'none') ||
+                       ($('#editModal') && $('#editModal').style.display !== 'none');
+  if(hasOpenModal) return;
   if(S.fsOpen && !audio.paused){
     fsIdleTimer = setTimeout(() => {
+      const modalOpen = ($('#lrcModal') && $('#lrcModal').style.display !== 'none') ||
+                        ($('#lrcSearchModal') && $('#lrcSearchModal').style.display !== 'none') ||
+                        ($('#editModal') && $('#editModal').style.display !== 'none');
+      if(modalOpen) return;
       if(S.fsOpen && !audio.paused) fs.classList.add('fs-idle');
     }, 3500);
   }
@@ -6313,7 +6289,14 @@ if(_fsEl){
   _fsEl.addEventListener('mousemove', resetFsIdle);
   _fsEl.addEventListener('mousedown', resetFsIdle);
   _fsEl.addEventListener('touchstart', (e) => {
-    if(e.target.closest('#fsCtrl, #fsTop, .lrow, input, button, select')){
+    if(e.target.closest('#fsCtrl, #fsTop, .lrow, input, button, select, .modal, .modal-card, #lrcModal, #lrcSearchModal, #editModal')){
+      resetFsIdle();
+      return;
+    }
+    const hasOpenModal = ($('#lrcModal') && $('#lrcModal').style.display !== 'none') ||
+                         ($('#lrcSearchModal') && $('#lrcSearchModal').style.display !== 'none') ||
+                         ($('#editModal') && $('#editModal').style.display !== 'none');
+    if(hasOpenModal){
       resetFsIdle();
       return;
     }
@@ -7220,6 +7203,13 @@ let currentEditingTrack = null;
 
 function openEditModal(t){
   currentEditingTrack = t;
+  const modal = $('#editModal');
+  if(!modal) return;
+  if(document.fullscreenElement && $('#fs').classList.contains('on')){
+    $('#fs').appendChild(modal);
+  } else {
+    document.body.appendChild(modal);
+  }
   $('#editTitle').value = t.title || t.filename || '';
   $('#editArtist').value = t.artist || '';
   $('#editAlbum').value = t.album || '';
